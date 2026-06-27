@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
 import { getClient, MODEL } from "@/lib/anthropic";
 import { buildPrototypePrompt } from "@/lib/prompts";
+import { extractJson } from "@/lib/extract-json";
 
 export const runtime = "nodejs";
 
 interface Body {
   needSummary: string;
   rawFeedback: string;
-}
-
-/** 从模型文本中提取 JSON(容忍 ```json 代码块包裹)。 */
-function extractJson(text: string): unknown {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = fenced ? fenced[1] : text;
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("未找到 JSON");
-  return JSON.parse(candidate.slice(start, end + 1));
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -35,8 +26,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const msg = await getClient().messages.create({
       model: MODEL,
-      max_tokens: 64000,
-      thinking: { type: "adaptive" },
+      max_tokens: 16000,
       system,
       messages: [{ role: "user", content: user }],
     });

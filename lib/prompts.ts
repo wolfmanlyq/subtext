@@ -9,8 +9,10 @@ export function buildAnalyzePrompt(input: AnalyzeInput): {
 并给出分岗位的修改项、需反问客户的问题、以及一段专业的客户回复话术。
 回复话术要求:不卑微、不过度承诺、体现理解客户诉求、说明下一版修改方向。
 若信息明显不足以得出可靠结论,将 needMoreInfo 设为 true,并在 questionsToAsk 中
-列出最该问的问题,其余字段可留空,不要强行编造结论。
-只输出与 schema 对应的结构化结果。`;
+列出最该问的问题,其余字段可留空数组/空串,不要强行编造结论。
+严格只输出 JSON,不要输出 JSON 以外的任何内容,形如:
+{"needMoreInfo":false,"oneLineTranslation":"...","explicitNeeds":["..."],"implicitNeeds":["..."],"coreConflict":"...","feedbackTypes":["..."],"items":[{"desc":"...","priority":"必须修改","roles":["设计"],"risk":"..."}],"questionsToAsk":["..."],"replyScript":"..."}
+其中 priority 只能取「必须修改」「建议优化」「需确认」之一。`;
 
   const user = `客户反馈原文:
 ${input.feedback}

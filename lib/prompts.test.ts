@@ -10,9 +10,11 @@ const input: AnalyzeInput = {
   clientStyle: "保守",
 };
 
-test("buildAnalyzePrompt 含 system 与拼入用户输入", () => {
+test("buildAnalyzePrompt 含 system、要求 JSON 输出、拼入用户输入", () => {
   const { system, user } = buildAnalyzePrompt(input);
   expect(system).toMatch(/广告/);
+  expect(system).toMatch(/JSON/);
+  expect(system).toContain("oneLineTranslation");
   expect(user).toContain("再高级一点");
   expect(user).toContain("品牌海报");
 });
