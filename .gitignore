@@ -18,6 +18,9 @@
 # test runner temp (sandbox-writable TMPDIR)
 /.vitest-tmp/
 
+# typescript incremental build info
+*.tsbuildinfo
+
 # editor / harness
 /.claude/
 
