@@ -7,10 +7,15 @@
     "build": "next build",
     "start": "next start",
     "test": "mkdir -p .vitest-tmp && TMPDIR=\"$PWD/.vitest-tmp\" vitest run",
-    "test:watch": "mkdir -p .vitest-tmp && TMPDIR=\"$PWD/.vitest-tmp\" vitest"
+    "test:watch": "mkdir -p .vitest-tmp && TMPDIR=\"$PWD/.vitest-tmp\" vitest",
+    "preview": "mkdir -p .cf-tmp && TMPDIR=\"$PWD/.cf-tmp\" opennextjs-cloudflare build && TMPDIR=\"$PWD/.cf-tmp\" opennextjs-cloudflare preview",
+    "deploy": "mkdir -p .cf-tmp && TMPDIR=\"$PWD/.cf-tmp\" opennextjs-cloudflare build && TMPDIR=\"$PWD/.cf-tmp\" opennextjs-cloudflare deploy",
+    "cf-build": "mkdir -p .cf-tmp && TMPDIR=\"$PWD/.cf-tmp\" opennextjs-cloudflare build",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",
+    "@opennextjs/cloudflare": "^1.20.1",
     "next": "16.2.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -26,6 +31,7 @@
     "@vitejs/plugin-react": "^6.0.3",
     "jsdom": "^27.0.1",
     "typescript": "^5",
-    "vitest": "^3.2.6"
+    "vitest": "^3.2.6",
+    "wrangler": "^4.105.0"
   }
 }

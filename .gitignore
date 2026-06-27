@@ -15,6 +15,14 @@
 .env.local
 .env*.local
 
+# cloudflare / opennext
+/.open-next/
+/.cf-tmp/
+.dev.vars
+.dev.vars.local
+cloudflare-env.d.ts
+.wrangler/
+
 # test runner temp (sandbox-writable TMPDIR)
 /.vitest-tmp/
 
