@@ -35,6 +35,12 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json(card);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "未知错误";
+    console.error("[analyze] 调用失败", {
+      message: msg,
+      cause: e instanceof Error ? (e as { cause?: unknown }).cause : undefined,
+      baseUrl: process.env.ANTHROPIC_BASE_URL ?? "(default api.anthropic.com)",
+      keySet: !!process.env.ANTHROPIC_API_KEY,
+    });
     return NextResponse.json({ error: `需求分析失败:${msg}` }, { status: 500 });
   }
 }

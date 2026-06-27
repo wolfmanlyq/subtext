@@ -37,6 +37,12 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json(data);
   } catch (e) {
     const m = e instanceof Error ? e.message : "未知错误";
+    console.error("[prototypes] 调用失败", {
+      message: m,
+      cause: e instanceof Error ? (e as { cause?: unknown }).cause : undefined,
+      baseUrl: process.env.ANTHROPIC_BASE_URL ?? "(default api.anthropic.com)",
+      keySet: !!process.env.ANTHROPIC_API_KEY,
+    });
     return NextResponse.json({ error: `生成小样失败:${m}` }, { status: 500 });
   }
 }
