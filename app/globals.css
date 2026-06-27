@@ -989,3 +989,401 @@ li::before {
     text-align: center;
   }
 }
+
+/* ========================================================================
+   明亮「自然 / 湖光山色」主题覆盖(prototype-2)。后置规则覆盖上方深色主题。
+   背景用自包含的天空→草地渐变;若要换成照片,把图片放进 public/ 后将 body
+   background 改为 url("/your-bg.jpg") 即可。
+   ======================================================================== */
+:root {
+  --ink: #1f2428;
+  --fog: #1f2428;
+  --mist: #2a2f33;
+  --muted: #687178;
+  --dim: #7c868d;
+  --line: rgba(255, 255, 255, 0.56);
+  --gold-soft: #6ca36b;
+  --gold: #8fb876;
+  --danger: #c97464;
+  --button-border: rgba(255, 255, 255, 0.54);
+  --button-dot: #9fd4ff;
+  --accent: #ff7a59;
+  --shadow: 0 28px 80px rgba(64, 94, 74, 0.18);
+}
+
+body {
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.72), transparent 18%),
+    radial-gradient(circle at 78% 20%, rgba(202, 224, 255, 0.72), transparent 24%),
+    radial-gradient(ellipse at 50% 72%, rgba(165, 203, 116, 0.86), transparent 34%),
+    linear-gradient(180deg, #b9d9f3 0%, #d9ebf3 38%, #d5e5b8 60%, #8dbb67 100%);
+  background-attachment: fixed;
+}
+
+.scene::before {
+  inset: 0;
+  height: auto;
+  transform: none;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.38), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.22));
+  filter: blur(1px);
+}
+
+.scene::after {
+  display: none;
+}
+
+.noise {
+  opacity: 0.08;
+  mix-blend-mode: soft-light;
+}
+
+.glass {
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42)),
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.52), transparent 30%);
+  backdrop-filter: blur(26px) saturate(1.08);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.72), 0 26px 72px rgba(70, 103, 72, 0.18);
+}
+
+.label {
+  color: #5d8e61;
+  text-shadow: none;
+}
+
+.brand-logo h1 {
+  color: #1f2428;
+  text-shadow: none;
+}
+
+.brand-logo span {
+  color: rgba(31, 36, 40, 0.52);
+}
+
+.slogan {
+  color: #22282c;
+  text-shadow: none;
+}
+
+.slogan strong {
+  color: #4e8757;
+  text-shadow: 0 0 22px rgba(120, 173, 101, 0.18);
+}
+
+.landing-inner {
+  border-radius: 42px;
+  padding: clamp(40px, 6vw, 72px) clamp(24px, 6vw, 78px);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.28)),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.58), transparent 42%);
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  backdrop-filter: blur(28px) saturate(1.08);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.76), 0 34px 90px rgba(63, 93, 72, 0.2);
+}
+
+.landing .btn-primary {
+  color: #fff;
+  background:
+    radial-gradient(circle at 24% 50%, rgba(100, 112, 255, 0.42), transparent 34%),
+    radial-gradient(circle at 78% 50%, rgba(242, 163, 142, 0.26), transparent 34%),
+    linear-gradient(105deg, #5e7bff 0%, #8f83ff 48%, #f2a38e 100%);
+  border: 1px solid rgba(45, 57, 85, 0.38);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.5),
+    inset 0 -16px 30px rgba(35, 45, 110, 0.22),
+    0 18px 46px rgba(75, 100, 170, 0.25);
+}
+
+.input-head h2,
+.step-head h2 {
+  color: #1f2428;
+}
+
+.input-head p,
+.step-head p,
+.chip-title {
+  color: #667078;
+}
+
+textarea,
+.quote,
+.bubble {
+  color: #273036;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.64), inset 0 20px 60px rgba(170, 190, 170, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.btn-primary,
+.btn-ghost,
+.chip,
+.select-btn {
+  color: #263038;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.48));
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7), 0 12px 30px rgba(80, 115, 80, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.btn-primary:hover,
+.btn-ghost:hover,
+.chip:hover,
+.chip.active,
+.select-btn:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(238, 250, 244, 0.62));
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.82),
+    0 16px 38px rgba(80, 115, 80, 0.18),
+    0 0 24px rgba(139, 196, 222, 0.2);
+}
+
+/* 顶栏:进度条 + 竖排步骤(数字在上、标签在下),当前步骤橙色高亮 */
+.topbar {
+  width: min(1120px, 100%);
+  padding: 22px 26px 18px;
+  border-radius: 34px;
+  background: rgba(255, 255, 255, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.66), 0 18px 46px rgba(70, 103, 72, 0.14);
+  backdrop-filter: blur(24px);
+  overflow: visible;
+}
+
+.topbar::before {
+  content: "";
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  top: 46px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  z-index: 0;
+}
+
+.topbar::after {
+  content: "";
+  position: absolute;
+  left: 7%;
+  top: 46px;
+  width: var(--progress, 0%);
+  max-width: 86%;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(112, 181, 219, 0.78), rgba(255, 122, 89, 0.78));
+  box-shadow: 0 0 18px rgba(115, 185, 232, 0.24);
+  z-index: 0;
+  transition: width 0.42s ease;
+}
+
+.nav-step {
+  min-height: 76px;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 8px;
+  padding: 0;
+  color: rgba(31, 36, 40, 0.48);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  opacity: 0.74;
+  z-index: 1;
+}
+
+.nav-step.done,
+.nav-step.active {
+  opacity: 1;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.nav-step.done::after {
+  content: "";
+}
+
+.nav-num {
+  width: 38px;
+  height: 38px;
+  color: #45604c;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.82), 0 8px 20px rgba(70, 103, 72, 0.16);
+  font-weight: 800;
+}
+
+.nav-step.done .nav-num {
+  background: rgba(225, 246, 229, 0.82);
+  color: #4b8d57;
+}
+
+.nav-label {
+  color: currentColor;
+  font-family: var(--body-font);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.nav-step.active .nav-label {
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(255, 122, 89, 0.25);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.nav-step.active .nav-num {
+  width: 48px;
+  height: 48px;
+  color: #fff;
+  background: var(--accent);
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.55),
+    0 0 0 7px rgba(255, 122, 89, 0.13),
+    0 0 28px rgba(255, 122, 89, 0.36);
+}
+
+.nav-step.active::before {
+  content: "";
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  width: 1px;
+  height: 36px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(255, 122, 89, 0.78), rgba(255, 122, 89, 0));
+}
+
+.nav-step.active::after {
+  content: "";
+  position: absolute;
+  top: 92px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  box-shadow: 0 0 18px rgba(255, 122, 89, 0.56);
+}
+
+/* 浅色磨砂卡片 */
+.mini-card,
+.vs-card,
+.role-card,
+.reply-card,
+.question-card,
+.sample-card {
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7), 0 18px 48px rgba(70, 103, 72, 0.14);
+  color: #1f2428;
+  backdrop-filter: blur(22px);
+}
+
+.mini-card h3,
+.role-card h3,
+.reply-card h3,
+.sample-card h3,
+.metric span,
+.vs-card strong {
+  color: #1f2428;
+}
+
+ul,
+.role-card p,
+.sample-card .strategy,
+.metric strong {
+  color: #667078;
+}
+
+li::before {
+  background: #7fb878;
+}
+
+.question-card {
+  color: rgba(31, 36, 40, 0.9);
+}
+
+.question-card:hover,
+.question-card.active,
+.sample-card.active {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.82), 0 24px 58px rgba(70, 103, 72, 0.18);
+}
+
+.status-pill {
+  color: #477b51;
+  background: rgba(225, 246, 229, 0.72);
+  border-color: rgba(255, 255, 255, 0.62);
+}
+
+.metric strong {
+  color: #5d8e61;
+}
+
+.generated-line,
+.sample-judgement {
+  color: #2f3a40;
+  background: rgba(255, 255, 255, 0.54);
+  border-color: rgba(255, 255, 255, 0.62);
+}
+
+/* 方向小样:浅色磨砂 + 白底 iframe */
+.sample-card b {
+  color: #245b75;
+  background: rgba(207, 236, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8), 0 8px 20px rgba(70, 103, 72, 0.12);
+}
+
+.sample-frame {
+  background: #fff;
+  border: 1px solid rgba(31, 36, 40, 0.1);
+}
+
+.sample-card .risk {
+  color: #bd6d5f;
+}
+
+.final-panel {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.55)),
+    radial-gradient(circle at 88% 0%, rgba(255, 122, 89, 0.15), transparent 34%),
+    radial-gradient(circle at 8% 100%, rgba(157, 211, 255, 0.32), transparent 42%);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.82), 0 34px 86px rgba(43, 72, 73, 0.22);
+}
+
+.checklist li::before {
+  content: "✓";
+  top: 0;
+  width: auto;
+  height: auto;
+  color: #4b8d57;
+  background: transparent;
+  font-weight: 900;
+}
+
+.loading-note {
+  color: #3d6b8a;
+  background: rgba(207, 236, 255, 0.4);
+  border: 1px solid rgba(157, 211, 255, 0.5);
+}
+
+.error-note {
+  color: #b5503f;
+  background: rgba(255, 224, 214, 0.5);
+  border: 1px solid rgba(201, 116, 100, 0.4);
+}
+
+

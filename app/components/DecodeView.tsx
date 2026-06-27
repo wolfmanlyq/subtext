@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { ActionCard } from "@/lib/schema";
 import type { AnalyzeInput } from "@/lib/demo";
 import type { Prototype } from "@/lib/prototype";
@@ -71,7 +71,11 @@ export function DecodeView({
 
   return (
     <section className="view decode-view active">
-      <nav className="topbar glass" aria-label="解码步骤">
+      <nav
+        className="topbar glass"
+        aria-label="解码步骤"
+        style={{ ["--progress"]: `${((step - 1) / 6) * 86}%` } as CSSProperties}
+      >
         {STEPS.map((s) => {
           const state =
             s.n === step ? " active" : s.n < maxVisited ? " done" : "";
