@@ -15,6 +15,12 @@
 .env.local
 .env*.local
 
+# test runner temp (sandbox-writable TMPDIR)
+/.vitest-tmp/
+
+# editor / harness
+/.claude/
+
 # misc
 .DS_Store
 *.pem
