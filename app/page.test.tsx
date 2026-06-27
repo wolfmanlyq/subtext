@@ -27,7 +27,7 @@ const samples = {
   ],
 };
 
-test("着陆→输入→解码:展示真实数据并在第7步生成小样", async () => {
+test("着陆→工作台→输入→解码:展示真实数据并在第7步生成小样", async () => {
   vi.stubGlobal(
     "fetch",
     vi
@@ -38,12 +38,11 @@ test("着陆→输入→解码:展示真实数据并在第7步生成小样", asy
 
   render(<Page />);
   await userEvent.click(screen.getByRole("button", { name: /Start Now/ }));
+  await userEvent.click(screen.getByRole("button", { name: /放入客户信号/ }));
   await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
 
-  // 进入解码视图,第 1 步展示情绪强度
   await waitFor(() => expect(screen.getByText("中等偏强")).toBeInTheDocument());
 
-  // 跳到第 7 步,触发小样生成
   await userEvent.click(screen.getByRole("button", { name: /交付/ }));
   await waitFor(() => expect(screen.getByText("食欲感强化版")).toBeInTheDocument());
   expect(document.querySelector("iframe")).not.toBeNull();
@@ -56,6 +55,7 @@ test("analyze 失败时在输入页展示错误", async () => {
   );
   render(<Page />);
   await userEvent.click(screen.getByRole("button", { name: /Start Now/ }));
+  await userEvent.click(screen.getByRole("button", { name: /放入客户信号/ }));
   await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
   await waitFor(() => expect(screen.getByText(/炸了/)).toBeInTheDocument());
 });

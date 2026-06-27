@@ -1,18 +1,20 @@
 "use client";
 import { useCallback, useRef, useState } from "react";
 import { Landing } from "./components/Landing";
+import { WorkflowHome } from "./components/WorkflowHome";
 import { InputView } from "./components/InputView";
 import { DecodeView } from "./components/DecodeView";
 import type { AnalyzeInput } from "@/lib/demo";
 import type { ActionCard } from "@/lib/schema";
 import type { Prototype } from "@/lib/prototype";
 
-type ViewId = "landing" | "input" | "decode";
+type ViewId = "landing" | "workflow" | "input" | "decode";
 
 export default function Page() {
   const [view, setView] = useState<ViewId>("landing");
   const [input, setInput] = useState<AnalyzeInput | null>(null);
   const [card, setCard] = useState<ActionCard | null>(null);
+  const [decodeStep, setDecodeStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +40,7 @@ export default function Page() {
       if (!r.ok) throw new Error(data.error || "解码失败");
       setInput(next);
       setCard(data);
+      setDecodeStep(data.needMoreInfo ? 5 : 1);
       setView("decode");
     } catch (e) {
       setError(e instanceof Error ? e.message : "未知错误");
@@ -74,23 +77,28 @@ export default function Page() {
     }
   }, [card, input]);
 
-  function reset() {
-    setCard(null);
-    setSamples(null);
-    setSamplesError(null);
-    samplesRequested.current = false;
-    setView("input");
-  }
-
   return (
     <main className="scene">
       <div className="noise" aria-hidden="true" />
-      {view === "landing" && <Landing onStart={() => setView("input")} />}
+
+      {view === "landing" && <Landing onStart={() => setView("workflow")} />}
+
+      {view === "workflow" && (
+        <WorkflowHome
+          hasResult={!!card}
+          onNewSignal={() => setView("input")}
+          onPickStep={(step) => {
+            setDecodeStep(step);
+            setView("decode");
+          }}
+        />
+      )}
+
       {view === "input" && (
         <div style={{ display: "grid", placeItems: "center", width: "100%" }}>
           <InputView
             loading={loading}
-            onBack={() => setView("landing")}
+            onBack={() => setView("workflow")}
             onDecode={handleDecode}
           />
           {error && (
@@ -100,15 +108,19 @@ export default function Page() {
           )}
         </div>
       )}
+
       {view === "decode" && card && input && (
         <DecodeView
+          key={decodeStep}
           card={card}
           input={input}
+          initialStep={decodeStep}
           samples={samples}
           samplesLoading={samplesLoading}
           samplesError={samplesError}
           onBack={() => setView("input")}
-          onReset={reset}
+          onReset={() => setView("input")}
+          onDone={() => setView("workflow")}
           onNeedSamples={fetchSamples}
         />
       )}

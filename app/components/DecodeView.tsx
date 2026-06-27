@@ -32,8 +32,10 @@ export function DecodeView({
   samples,
   samplesLoading,
   samplesError,
+  initialStep,
   onBack,
   onReset,
+  onDone,
   onNeedSamples,
 }: {
   card: ActionCard;
@@ -41,11 +43,13 @@ export function DecodeView({
   samples: Prototype[] | null;
   samplesLoading: boolean;
   samplesError: string | null;
+  initialStep?: number;
   onBack: () => void;
   onReset: () => void;
+  onDone: () => void;
   onNeedSamples: () => void;
 }) {
-  const [step, setStep] = useState(card.needMoreInfo ? 5 : 1);
+  const [step, setStep] = useState(initialStep ?? (card.needMoreInfo ? 5 : 1));
   const [maxVisited, setMaxVisited] = useState(step);
   const [picked, setPicked] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -281,6 +285,9 @@ export function DecodeView({
               <div className="right-actions">
                 <button className="btn-ghost" onClick={onReset}>
                   重新输入
+                </button>
+                <button className="btn-primary" onClick={onDone}>
+                  完成
                 </button>
               </div>
             )}

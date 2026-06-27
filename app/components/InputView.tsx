@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { DEMO_INPUT, type AnalyzeInput } from "@/lib/demo";
 
-const PROJECT_TYPES = ["新品推广", "KOL投放", "品牌海报", "短视频脚本"];
+const SCENES = ["新品上市", "活动促销", "社媒种草", "短视频脚本"];
 const STAGES = ["初稿反馈", "二轮修改", "执行前确认"];
 const GOALS = ["整理需求", "行动建议", "方向小样", "客户回复"];
 
@@ -16,9 +16,25 @@ export function InputView({
   onDecode: (input: AnalyzeInput) => void;
 }) {
   const [feedback, setFeedback] = useState(DEMO_INPUT.feedback);
-  const [projectType, setProjectType] = useState("新品推广");
+  const [projectType, setProjectType] = useState("新品上市");
   const [stage, setStage] = useState("初稿反馈");
   const [goals, setGoals] = useState<string[]>(["整理需求", "行动建议"]);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customValue, setCustomValue] = useState("");
+
+  const customActive = !SCENES.includes(projectType);
+
+  function pickScene(s: string) {
+    setProjectType(s);
+    setCustomOpen(false);
+  }
+
+  function confirmCustom() {
+    const v = customValue.trim();
+    if (!v) return;
+    setProjectType(v);
+    setCustomOpen(false);
+  }
 
   function toggleGoal(g: string) {
     setGoals((prev) =>
@@ -58,21 +74,44 @@ export function InputView({
         />
 
         <div className="chip-groups">
-          <div className="chip-group">
-            <div className="chip-title">项目类型</div>
+          <div className="chip-group option-card">
+            <div className="chip-title">项目场景</div>
             <div className="chips">
-              {PROJECT_TYPES.map((t) => (
+              {SCENES.map((s) => (
                 <button
-                  key={t}
-                  className={`chip${projectType === t ? " active" : ""}`}
-                  onClick={() => setProjectType(t)}
+                  key={s}
+                  className={`chip${projectType === s ? " active" : ""}`}
+                  onClick={() => pickScene(s)}
                 >
-                  {t}
+                  {s}
                 </button>
               ))}
+              <button
+                className={`chip${customActive ? " active" : ""}`}
+                onClick={() => setCustomOpen(true)}
+              >
+                {customActive ? projectType : "自定义"}
+              </button>
             </div>
+            {customOpen && (
+              <div className="custom-scene">
+                <input
+                  aria-label="自定义场景"
+                  placeholder="输入项目场景"
+                  value={customValue}
+                  onChange={(e) => setCustomValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") confirmCustom();
+                  }}
+                />
+                <button className="btn-ghost" onClick={confirmCustom}>
+                  确认
+                </button>
+              </div>
+            )}
           </div>
-          <div className="chip-group">
+
+          <div className="chip-group option-card">
             <div className="chip-title">当前阶段</div>
             <div className="chips">
               {STAGES.map((t) => (
@@ -86,7 +125,8 @@ export function InputView({
               ))}
             </div>
           </div>
-          <div className="chip-group">
+
+          <div className="chip-group option-card">
             <div className="chip-title">输出目标</div>
             <div className="chips">
               {GOALS.map((t) => (
