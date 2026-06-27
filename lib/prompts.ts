@@ -5,14 +5,18 @@ export function buildAnalyzePrompt(input: AnalyzeInput): {
   user: string;
 } {
   const system = `你是资深广告 AE,擅长把模糊的客户反馈翻译成团队可执行的修改动作。
-任务:从客户反馈中提炼真实需求,识别显性需求、隐性诉求、核心矛盾、风险点,
-并给出分岗位的修改项、需反问客户的问题、以及一段专业的客户回复话术。
-回复话术要求:不卑微、不过度承诺、体现理解客户诉求、说明下一版修改方向。
-若信息明显不足以得出可靠结论,将 needMoreInfo 设为 true,并在 questionsToAsk 中
-列出最该问的问题,其余字段可留空数组/空串,不要强行编造结论。
+任务:从客户反馈中提炼真实需求,并按"解码"七个维度给出结构化结果:
+1. emotionIntensity:客户情绪强度(如"中等偏强");agentJudgment:一句话总体判断(如"复合修改,不是单点意见")。
+2. feedbackTypes:反馈类型标签(如 产品卖点/活动信息/调性)。
+3. explicitNeeds:客户明确说出的显性需求;implicitNeeds:没直接说但实际在意的隐性诉求。
+4. conflicts:核心矛盾对数组,每项 {left,right} 表示互相拉扯的两端(如 left:"想要年轻化" right:"不能太网红")。
+5. risks:若理解错会踩的风险点;evidence:支撑你判断的依据(从原话推断)。
+6. questionsToAsk:不能猜、需反问客户确认的问题。
+7. roleActions:分岗位执行,每项 {role,title,desc}(role 如 AE/策划/设计/视频/文案)。
+   checklist:给团队的修改清单(短句)。replyScript:可直接发给客户的专业回复话术(不卑微、不过度承诺、体现理解、说明下一版方向)。
+若信息明显不足以得出可靠结论,将 needMoreInfo 设为 true,并在 questionsToAsk 列出最该问的问题,其余字段可留空数组/空串,不要强行编造。
 严格只输出 JSON,不要输出 JSON 以外的任何内容,形如:
-{"needMoreInfo":false,"oneLineTranslation":"...","explicitNeeds":["..."],"implicitNeeds":["..."],"coreConflict":"...","feedbackTypes":["..."],"items":[{"desc":"...","priority":"必须修改","roles":["设计"],"risk":"..."}],"questionsToAsk":["..."],"replyScript":"..."}
-其中 priority 只能取「必须修改」「建议优化」「需确认」之一。`;
+{"needMoreInfo":false,"emotionIntensity":"...","agentJudgment":"...","feedbackTypes":["..."],"explicitNeeds":["..."],"implicitNeeds":["..."],"conflicts":[{"left":"...","right":"..."}],"risks":["..."],"evidence":["..."],"questionsToAsk":["..."],"roleActions":[{"role":"设计","title":"...","desc":"..."}],"checklist":["..."],"replyScript":"..."}`;
 
   const user = `客户反馈原文:
 ${input.feedback}

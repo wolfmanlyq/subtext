@@ -1,23 +1,27 @@
 import { test, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { PrototypeGallery } from "./PrototypeGallery";
 import type { Prototype } from "@/lib/prototype";
 
 const protos: Prototype[] = [
-  { strategy: "强化卖点", html: "<h1>A</h1>", solvesFeedback: "卖点", risk: "无", priority: "高" },
-  { strategy: "创意升级", html: "<h1>B</h1>", solvesFeedback: "传播", risk: "成本", priority: "中" },
+  { strategy: "食欲感强化版", html: "<h1>A</h1>", solvesFeedback: "产品吸引力", risk: "偏产品感", priority: "高" },
+  { strategy: "活动利益强化版", html: "<h1>B</h1>", solvesFeedback: "购买理由", risk: "显廉价", priority: "中" },
 ];
 
-test("渲染每个方向的策略与一个 iframe", () => {
+test("每个方向渲染一个 sandbox iframe,srcDoc 含 html", () => {
   render(<PrototypeGallery prototypes={protos} />);
-  expect(screen.getByText("强化卖点")).toBeInTheDocument();
-  expect(screen.getByText("创意升级")).toBeInTheDocument();
-  expect(document.querySelectorAll("iframe").length).toBe(2);
+  const iframes = document.querySelectorAll("iframe");
+  expect(iframes.length).toBe(2);
+  expect(iframes[0].getAttribute("sandbox")).not.toBeNull();
+  expect(iframes[0].getAttribute("srcdoc")).toContain("<h1>A</h1>");
 });
 
-test("iframe 带 sandbox 且 srcDoc 含 html", () => {
-  render(<PrototypeGallery prototypes={protos} />);
-  const iframe = document.querySelector("iframe")!;
-  expect(iframe.getAttribute("sandbox")).not.toBeNull();
-  expect(iframe.getAttribute("srcdoc")).toContain("<h1>A</h1>");
+test("选择某方向后展示 AI 反推偏好判断", async () => {
+  const { container } = render(<PrototypeGallery prototypes={protos} />);
+  await userEvent.click(screen.getAllByRole("button", { name: /选这个方向/ })[1]);
+  const judge = container.querySelector(".sample-judgement");
+  expect(judge).not.toBeNull();
+  expect(judge?.textContent).toContain("活动利益强化版");
+  expect(judge?.textContent).toContain("购买理由");
 });
