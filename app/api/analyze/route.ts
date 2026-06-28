@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { getClient, MODEL } from "@/lib/anthropic";
-import { ActionCardSchema } from "@/lib/schema";
+import { ActionCardSchema, type ActionCard } from "@/lib/schema";
 import { buildAnalyzePrompt, buildAnalyzeContent } from "@/lib/prompts";
 import { extractJson } from "@/lib/extract-json";
 import { AttachmentsSchema, attachmentsWithinLimit } from "@/lib/attachment";
 import type { AnalyzeInput } from "@/lib/demo";
 
 export const runtime = "nodejs";
+
+/** 模型返回了内容、但不是合法需求卡(解析或校验失败)—— 可重试。 */
+class BadModelOutput extends Error {}
 
 export async function POST(request: Request): Promise<Response> {
   let body: AnalyzeInput & { attachments?: unknown };
@@ -41,7 +44,8 @@ export async function POST(request: Request): Promise<Response> {
     clientStyle: body.clientStyle,
   };
 
-  async function callModel(dropMultimodal: boolean) {
+  // 调一次模型,拿到文本(SDK 抛错=连接级,向上传播)
+  async function callModelText(dropMultimodal: boolean): Promise<string> {
     const built = attachments.length
       ? buildAnalyzeContent(input, attachments, { dropMultimodal })
       : (() => {
@@ -57,28 +61,62 @@ export async function POST(request: Request): Promise<Response> {
     const textBlock = (msg.content as Array<{ type: string; text?: string }>).find(
       (b) => b.type === "text",
     );
-    return ActionCardSchema.parse(extractJson(textBlock?.text ?? ""));
+    return textBlock?.text ?? "";
   }
 
-  try {
-    const card = await callModel(false);
-    return NextResponse.json(card);
-  } catch (firstErr) {
-    // 有附件 → 去掉多模态块重试一次
-    if (attachments.length) {
-      try {
-        const card = await callModel(true);
-        return NextResponse.json({ ...card, attachmentsDropped: true });
-      } catch (secondErr) {
-        const m = secondErr instanceof Error ? secondErr.message : "未知错误";
-        console.error("[analyze] 降级重试仍失败", { message: m });
-        return NextResponse.json({ error: `需求分析失败:${m}` }, { status: 500 });
-      }
+  // 把文本解析成卡片;失败统一抛 BadModelOutput(便于和连接错区分)
+  function parseCard(text: string): ActionCard {
+    try {
+      return ActionCardSchema.parse(extractJson(text));
+    } catch {
+      throw new BadModelOutput("模型返回内容无法解析为需求卡");
     }
-    const m = firstErr instanceof Error ? firstErr.message : "未知错误";
+  }
+
+  const FRIENDLY = "需求分析失败:模型返回内容异常,请重试。";
+
+  // 无附件:中转偶发返回空/坏内容 → 解析失败自动重试一次;连接错不重试。
+  if (!attachments.length) {
+    try {
+      return NextResponse.json(parseCard(await callModelText(false)));
+    } catch (firstErr) {
+      if (firstErr instanceof BadModelOutput) {
+        try {
+          return NextResponse.json(parseCard(await callModelText(false)));
+        } catch (retryErr) {
+          if (retryErr instanceof BadModelOutput) {
+            console.error("[analyze] 两次输出均无效");
+            return NextResponse.json({ error: FRIENDLY }, { status: 500 });
+          }
+          // 重试时连接错
+          return connectionError(retryErr);
+        }
+      }
+      return connectionError(firstErr);
+    }
+  }
+
+  // 有附件:先带多模态;失败(连接错如中转不支持多模态,或解析失败)→ 去掉多模态块重试一次。
+  try {
+    return NextResponse.json(parseCard(await callModelText(false)));
+  } catch {
+    try {
+      const card = parseCard(await callModelText(true));
+      return NextResponse.json({ ...card, attachmentsDropped: true });
+    } catch (secondErr) {
+      if (secondErr instanceof BadModelOutput) {
+        console.error("[analyze] 降级后输出仍无效");
+        return NextResponse.json({ error: FRIENDLY }, { status: 500 });
+      }
+      return connectionError(secondErr);
+    }
+  }
+
+  function connectionError(e: unknown): Response {
+    const m = e instanceof Error ? e.message : "未知错误";
     console.error("[analyze] 调用失败", {
       message: m,
-      cause: firstErr instanceof Error ? (firstErr as { cause?: unknown }).cause : undefined,
+      cause: e instanceof Error ? (e as { cause?: unknown }).cause : undefined,
       baseUrl: process.env.ANTHROPIC_BASE_URL ?? "(default api.anthropic.com)",
       keySet: !!process.env.ANTHROPIC_API_KEY,
     });

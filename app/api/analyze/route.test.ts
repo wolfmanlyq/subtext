@@ -105,3 +105,24 @@ test("无附件且 SDK 失败返回 500(不重试)", async () => {
   // 无附件时不应触发降级重试:模型只被调用一次
   expect(createMock).toHaveBeenCalledTimes(1);
 });
+
+test("无附件:模型首次返回无效内容,自动重试一次后成功", async () => {
+  createMock
+    .mockResolvedValueOnce(fakeMessage("（中转抽风返回的空/无关内容)"))
+    .mockResolvedValueOnce(fakeMessage(JSON.stringify(validCard)));
+  const res = await POST(req(DEMO_INPUT));
+  expect(res.status).toBe(200);
+  const json = await res.json();
+  expect(json.clientReply).toBe("收到");
+  expect(createMock).toHaveBeenCalledTimes(2);
+});
+
+test("无附件:模型两次都返回无效内容,返回友好提示(不暴露 Zod 原文)", async () => {
+  createMock.mockResolvedValue(fakeMessage("不是 JSON"));
+  const res = await POST(req(DEMO_INPUT));
+  expect(res.status).toBe(500);
+  const json = await res.json();
+  expect(json.error).toMatch(/模型返回内容异常|请重试/);
+  expect(json.error).not.toMatch(/needMoreInfo|invalid_type|expected/);
+  expect(createMock).toHaveBeenCalledTimes(2);
+});
