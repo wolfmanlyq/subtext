@@ -10,6 +10,9 @@ interface Body {
   rawFeedback: string;
 }
 
+/** 模型返回了内容、但不是合法 JSON(解析失败)—— 可重试。 */
+class BadModelOutput extends Error {}
+
 export async function POST(request: Request): Promise<Response> {
   let body: Body;
   try {
@@ -23,7 +26,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const { system, user } = buildPrototypePrompt(body.needSummary, body.rawFeedback);
 
-  try {
+  async function callText(): Promise<string> {
     const msg = await getClient().messages.create({
       model: MODEL,
       max_tokens: 16000,
@@ -33,9 +36,38 @@ export async function POST(request: Request): Promise<Response> {
     const textBlock = (msg.content as Array<{ type: string; text?: string }>).find(
       (b) => b.type === "text",
     );
-    const data = extractJson(textBlock?.text ?? "");
-    return NextResponse.json(data);
-  } catch (e) {
+    return textBlock?.text ?? "";
+  }
+
+  function parse(text: string): unknown {
+    try {
+      return extractJson(text);
+    } catch {
+      throw new BadModelOutput("小样返回内容无法解析");
+    }
+  }
+
+  try {
+    return NextResponse.json(parse(await callText()));
+  } catch (firstErr) {
+    if (firstErr instanceof BadModelOutput) {
+      try {
+        return NextResponse.json(parse(await callText()));
+      } catch (retryErr) {
+        if (retryErr instanceof BadModelOutput) {
+          console.error("[prototypes] 两次输出均无效");
+          return NextResponse.json(
+            { error: "生成小样失败:模型返回内容异常,请重试。" },
+            { status: 500 },
+          );
+        }
+        return connErr(retryErr);
+      }
+    }
+    return connErr(firstErr);
+  }
+
+  function connErr(e: unknown): Response {
     const m = e instanceof Error ? e.message : "未知错误";
     console.error("[prototypes] 调用失败", {
       message: m,

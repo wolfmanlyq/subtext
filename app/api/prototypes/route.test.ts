@@ -66,3 +66,23 @@ test("SDK 调用失败返回 500", async () => {
   const res = await POST(req({ needSummary: "x", rawFeedback: "y" }));
   expect(res.status).toBe(500);
 });
+
+test("首次返回坏内容,自动重试一次后成功", async () => {
+  const payload = { prototypes: [{ name: "A", strategy: "s", sampleCopy: "c", highlight: "h", recommend: "主推", html: "<h1>A</h1>" }] };
+  createMock
+    .mockResolvedValueOnce(fakeMessage("中转抽风,没有 JSON"))
+    .mockResolvedValueOnce(fakeMessage(JSON.stringify(payload)));
+  const res = await POST(req({ needSummary: "x", rawFeedback: "y" }));
+  expect(res.status).toBe(200);
+  expect(createMock).toHaveBeenCalledTimes(2);
+});
+
+test("两次坏内容返回友好提示(不暴露 未找到 JSON 原文)", async () => {
+  createMock.mockResolvedValue(fakeMessage("不是 JSON"));
+  const res = await POST(req({ needSummary: "x", rawFeedback: "y" }));
+  expect(res.status).toBe(500);
+  const json = await res.json();
+  expect(json.error).toMatch(/异常|请重试/);
+  expect(json.error).not.toMatch(/未找到 JSON/);
+  expect(createMock).toHaveBeenCalledTimes(2);
+});
