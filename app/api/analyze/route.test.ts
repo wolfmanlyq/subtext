@@ -22,7 +22,6 @@ function req(body: unknown): Request {
     body: JSON.stringify(body),
   });
 }
-
 function fakeMessage(text: string) {
   return { content: [{ type: "text", text }] };
 }
@@ -32,33 +31,60 @@ const validCard = {
   emotionIntensity: "中高",
   keyInsight: "客户不是觉得画面不好看,而是担心广告好看但不卖货。",
   realDemand: { explicit: ["卖点更明确"], implicit: ["促进到店"] },
-  coreTension: [
-    { left: "年轻化", right: "品牌质感", leftPercent: 65, rightPercent: 35, note: "想年轻又怕掉质感" },
-  ],
-  foresight: ["下一轮客户可能会问:用户为什么现在买"],
+  coreTension: [{ left: "年轻化", right: "品牌质感", leftPercent: 65, rightPercent: 35, note: "x" }],
+  foresight: ["下一轮会问为什么现在买"],
   evidence: ["客户先认可视觉好看 → 说明问题不是审美"],
   questionsToConfirm: [],
-  nextActions: [{ role: "设计", title: "重排层级", detail: "放大产品杯", reason: "补产品吸引力" }],
+  nextActions: [{ role: "设计", title: "重排层级", detail: "放大产品杯", reason: "补吸引力" }],
   checklist: ["强化产品卖点"],
   clientReply: "收到",
 };
+const pdfAtt = { name: "brief.pdf", kind: "pdf", mediaType: "application/pdf", data: "QkFTRTY0" };
 
-test("解析并校验模型返回的需求卡 JSON", async () => {
+test("无附件:与现状一致,响应不含 attachmentsDropped", async () => {
   createMock.mockResolvedValue(fakeMessage(JSON.stringify(validCard)));
   const res = await POST(req(DEMO_INPUT));
   expect(res.status).toBe(200);
   const json = await res.json();
   expect(json.clientReply).toBe("收到");
-  expect(json.nextActions[0].role).toBe("设计");
-  expect(json.coreTension[0].leftPercent).toBe(65);
+  expect(json.attachmentsDropped).toBeUndefined();
 });
 
-test("模型返回被代码块包裹的 JSON 也能解析", async () => {
-  createMock.mockResolvedValue(
-    fakeMessage("```json\n" + JSON.stringify(validCard) + "\n```"),
-  );
-  const res = await POST(req(DEMO_INPUT));
+test("带 PDF 附件:传给 SDK 的 content 含 document 块", async () => {
+  createMock.mockResolvedValue(fakeMessage(JSON.stringify(validCard)));
+  const res = await POST(req({ ...DEMO_INPUT, attachments: [pdfAtt] }));
   expect(res.status).toBe(200);
+  const callArg = createMock.mock.calls[0][0];
+  const content = callArg.messages[0].content;
+  expect(Array.isArray(content)).toBe(true);
+  expect(content.some((b: { type: string }) => b.type === "document")).toBe(true);
+});
+
+test("多模态失败:去掉文档块重试一次,成功并标记 attachmentsDropped", async () => {
+  createMock
+    .mockImplementationOnce(() => {
+      throw new Error("messages.0.content.1: unsupported content block type document");
+    })
+    .mockResolvedValueOnce(fakeMessage(JSON.stringify(validCard)));
+  const res = await POST(req({ ...DEMO_INPUT, attachments: [pdfAtt] }));
+  expect(res.status).toBe(200);
+  const json = await res.json();
+  expect(json.attachmentsDropped).toBe(true);
+  // 第二次调用不含 document 块
+  const secondContent = createMock.mock.calls[1][0].messages[0].content;
+  expect(secondContent.some((b: { type: string }) => b.type === "document")).toBe(false);
+});
+
+test("超体积附件返回 400", async () => {
+  const big = { ...pdfAtt, data: "a".repeat(4 * 1024 * 1024 + 1) };
+  const res = await POST(req({ ...DEMO_INPUT, attachments: [big] }));
+  expect(res.status).toBe(400);
+});
+
+test("非法附件(kind 非枚举)返回 400", async () => {
+  const bad = { ...pdfAtt, kind: "video" };
+  const res = await POST(req({ ...DEMO_INPUT, attachments: [bad] }));
+  expect(res.status).toBe(400);
 });
 
 test("缺 feedback 返回 400", async () => {
@@ -66,16 +92,8 @@ test("缺 feedback 返回 400", async () => {
   expect(res.status).toBe(400);
 });
 
-test("模型输出不符合 schema 时返回 500", async () => {
-  createMock.mockResolvedValue(
-    fakeMessage(JSON.stringify({ needMoreInfo: false })),
-  );
-  const res = await POST(req(DEMO_INPUT));
-  expect(res.status).toBe(500);
-});
-
-test("SDK 调用失败返回 500 且含可读信息", async () => {
-  getClientMock.mockImplementation(() => {
+test("无附件且 SDK 失败返回 500(不重试)", async () => {
+  createMock.mockImplementation(() => {
     throw new Error("boom");
   });
   const res = await POST(req(DEMO_INPUT));

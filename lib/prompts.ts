@@ -78,8 +78,15 @@ import type { Attachment } from "./attachment";
 
 export type AnalyzeContentBlock =
   | { type: "text"; text: string }
-  | { type: "document"; source: { type: "base64"; media_type: string; data: string } }
-  | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+  | { type: "document"; source: { type: "base64"; media_type: "application/pdf"; data: string } }
+  | {
+      type: "image";
+      source: {
+        type: "base64";
+        media_type: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+        data: string;
+      };
+    };
 
 export function buildAnalyzeContent(
   input: AnalyzeInput,
@@ -106,12 +113,16 @@ export function buildAnalyzeContent(
       if (a.kind === "pdf") {
         content.push({
           type: "document",
-          source: { type: "base64", media_type: a.mediaType, data: a.data },
+          source: { type: "base64", media_type: "application/pdf" as const, data: a.data },
         });
       } else if (a.kind === "image") {
         content.push({
           type: "image",
-          source: { type: "base64", media_type: a.mediaType, data: a.data },
+          source: {
+            type: "base64",
+            media_type: a.mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            data: a.data,
+          },
         });
       }
     }
