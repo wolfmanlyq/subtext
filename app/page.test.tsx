@@ -138,7 +138,11 @@ test("core 已到但 delivery 挂起:Step6 显示解码中", async () => {
   render(<Page />);
   await userEvent.click(screen.getByRole("button", { name: /Start Now/ }));
   await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
-  // 等 core 到(Step2 数据可达),再翻到 Step6
+  // 等 core 已到:Step1 洞察强度渲染出来,确认 insight 已就绪
+  await waitFor(() => expect(screen.getByText("中高")).toBeInTheDocument());
+  // 翻到 Step6
   await userEvent.click(screen.getByRole("button", { name: /方向/ }));
+  // delivery 挂起 → 客户回复话术不可见,但"解码中"提示可见
+  expect(screen.queryByText("客户回复话术")).toBeNull();
   await waitFor(() => expect(screen.getByText(/解码中/)).toBeInTheDocument());
 });

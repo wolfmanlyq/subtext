@@ -16,8 +16,6 @@ export default function Page() {
   const [input, setInput] = useState<AnalyzeInput | null>(null);
   const [insight, setInsight] = useState<Insight | null>(null);
   const [decodeStep, setDecodeStep] = useState(1);
-  const [error, setError] = useState<string | null>(null);
-
   const [core, setCore] = useState<Core | null>(null);
   const [coreLoading, setCoreLoading] = useState(false);
   const [coreError, setCoreError] = useState<string | null>(null);
@@ -37,7 +35,6 @@ export default function Page() {
     attachments: import("@/lib/attachment").Attachment[],
   ) {
     // 原话立即显示(=用户输入);AI 字段分组异步填入。
-    setError(null);
     setInsight(null);
     setCore(null);
     setCoreError(null);
@@ -157,11 +154,6 @@ export default function Page() {
             onBack={() => setView("landing")}
             onDecode={handleDecode}
           />
-          {error && (
-            <p className="error-note" style={{ maxWidth: 1040, width: "100%" }}>
-              ⚠️ {error}
-            </p>
-          )}
         </div>
       )}
 
