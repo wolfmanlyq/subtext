@@ -1014,10 +1014,11 @@ li::before {
 body {
   color: var(--ink);
   background:
-    radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.72), transparent 18%),
-    radial-gradient(circle at 78% 20%, rgba(202, 224, 255, 0.72), transparent 24%),
-    radial-gradient(ellipse at 50% 72%, rgba(165, 203, 116, 0.86), transparent 34%),
-    linear-gradient(180deg, #b9d9f3 0%, #d9ebf3 38%, #d5e5b8 60%, #8dbb67 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.26)),
+    url("/lake-mountain-bg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   background-attachment: fixed;
 }
 
