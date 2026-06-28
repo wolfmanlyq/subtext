@@ -89,6 +89,7 @@ export function InputView({
   }
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    setNotice(null);
     const picked = Array.from(e.target.files ?? []);
     e.target.value = "";
     const loaded: LoadedFile[] = [];
