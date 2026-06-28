@@ -38,7 +38,6 @@ test("着陆→工作台→输入→解码:展示真实数据并在第6步生成
 
   render(<Page />);
   await userEvent.click(screen.getByRole("button", { name: /Start Now/ }));
-  await userEvent.click(screen.getByRole("button", { name: /甲方爸爸的话/ }));
   await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
 
   await waitFor(() => expect(screen.getByText("中高")).toBeInTheDocument());
@@ -55,7 +54,6 @@ test("analyze 失败时在输入页展示错误", async () => {
   );
   render(<Page />);
   await userEvent.click(screen.getByRole("button", { name: /Start Now/ }));
-  await userEvent.click(screen.getByRole("button", { name: /甲方爸爸的话/ }));
   await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
   await waitFor(() => expect(screen.getByText(/炸了/)).toBeInTheDocument());
 });
@@ -68,7 +66,6 @@ test("attachmentsDropped 为真时,解码视图显示降级提示", async () => 
   );
   render(<Page />);
   await userEvent.click(screen.getByRole("button", { name: /Start Now/ }));
-  await userEvent.click(screen.getByRole("button", { name: /甲方爸爸的话/ }));
   await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
   await waitFor(() =>
     expect(screen.getByText(/附件未被模型读取/)).toBeInTheDocument(),

@@ -88,7 +88,7 @@ export default function Page() {
     <main className="scene">
       <div className="noise" aria-hidden="true" />
 
-      {view === "landing" && <Landing onStart={() => setView("workflow")} />}
+      {view === "landing" && <Landing onStart={() => setView("input")} />}
 
       {view === "workflow" && (
         <WorkflowHome
@@ -105,7 +105,7 @@ export default function Page() {
         <div style={{ display: "grid", placeItems: "center", width: "100%" }}>
           <InputView
             loading={loading}
-            onBack={() => setView("workflow")}
+            onBack={() => setView("landing")}
             onDecode={handleDecode}
           />
           {error && (
