@@ -2,13 +2,11 @@ import { NextResponse } from "next/server";
 import { getClient, MODEL } from "@/lib/anthropic";
 import { CoreSchema, type Core } from "@/lib/schema";
 import { buildCorePrompt, buildCoreContent } from "@/lib/prompts";
-import { extractJson } from "@/lib/extract-json";
+import { callStructured, BadModelOutput } from "@/lib/tool-call";
 import { AttachmentsSchema, attachmentsWithinLimit } from "@/lib/attachment";
 import type { AnalyzeInput } from "@/lib/demo";
 
 export const runtime = "nodejs";
-
-class BadModelOutput extends Error {}
 
 export async function POST(request: Request): Promise<Response> {
   let body: AnalyzeInput & { attachments?: unknown };
@@ -44,42 +42,41 @@ export async function POST(request: Request): Promise<Response> {
     clientRole: body.clientRole,
   };
 
-  async function callModelText(dropMultimodal: boolean): Promise<string> {
-    const built = attachments.length
-      ? buildCoreContent(input, attachments, { dropMultimodal })
-      : (() => {
-          const { system, user } = buildCorePrompt(input);
-          return { system, content: user };
-        })();
-    const msg = await getClient().messages.create({
-      model: MODEL,
-      max_tokens: 12000,
-      system: built.system,
-      messages: [{ role: "user", content: built.content }],
-    });
-    const textBlock = (msg.content as Array<{ type: string; text?: string }>).find(
-      (b) => b.type === "text",
-    );
-    return textBlock?.text ?? "";
-  }
-
-  function parseCore(text: string): Core {
-    try {
-      return CoreSchema.parse(extractJson(text));
-    } catch {
-      throw new BadModelOutput("模型返回内容无法解析为分析结果");
-    }
-  }
-
   const FRIENDLY = "分析失败:模型返回内容异常,请重试。";
+  const TOOL_DESCRIPTION =
+    "返回客户反馈的结构化分析(needMoreInfo/realDemand/coreTension/foresight/evidence/questionsToConfirm)。";
+
+  async function getCore(dropMultimodal: boolean): Promise<Core> {
+    let system: string;
+    let content: string | unknown[];
+    if (attachments.length) {
+      const built = buildCoreContent(input, attachments, { dropMultimodal });
+      system = built.system;
+      content = built.content;
+    } else {
+      const built = buildCorePrompt(input);
+      system = built.system;
+      content = built.user;
+    }
+    return callStructured({
+      client: getClient(),
+      model: MODEL,
+      maxTokens: 12000,
+      system,
+      content,
+      schema: CoreSchema,
+      toolName: "emit_core",
+      toolDescription: TOOL_DESCRIPTION,
+    });
+  }
 
   if (!attachments.length) {
     try {
-      return NextResponse.json(parseCore(await callModelText(false)));
+      return NextResponse.json(await getCore(false));
     } catch (firstErr) {
       if (firstErr instanceof BadModelOutput) {
         try {
-          return NextResponse.json(parseCore(await callModelText(false)));
+          return NextResponse.json(await getCore(false));
         } catch (retryErr) {
           if (retryErr instanceof BadModelOutput) {
             console.error("[decode/core] 两次输出均无效");
@@ -93,10 +90,10 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    return NextResponse.json(parseCore(await callModelText(false)));
+    return NextResponse.json(await getCore(false));
   } catch {
     try {
-      const core = parseCore(await callModelText(true));
+      const core = await getCore(true);
       return NextResponse.json({ ...core, attachmentsDropped: true });
     } catch (secondErr) {
       if (secondErr instanceof BadModelOutput) {

@@ -2,12 +2,10 @@ import { NextResponse } from "next/server";
 import { getClient, MODEL } from "@/lib/anthropic";
 import { InsightSchema, type Insight } from "@/lib/insight";
 import { buildInsightPrompt } from "@/lib/prompts";
-import { extractJson } from "@/lib/extract-json";
+import { callStructured, BadModelOutput } from "@/lib/tool-call";
 import type { AnalyzeInput } from "@/lib/demo";
 
 export const runtime = "nodejs";
-
-class BadModelOutput extends Error {}
 
 export async function POST(request: Request): Promise<Response> {
   let body: AnalyzeInput;
@@ -33,33 +31,31 @@ export async function POST(request: Request): Promise<Response> {
 
   const { system, user } = buildInsightPrompt(input);
 
-  async function callText(): Promise<string> {
-    const msg = await getClient().messages.create({
+  async function getInsight(): Promise<Insight> {
+    return callStructured({
+      client: getClient(),
       model: MODEL,
-      max_tokens: 600,
+      maxTokens: 600,
       system,
-      messages: [{ role: "user", content: user }],
+      content: user,
+      schema: InsightSchema,
+      toolName: "emit_insight",
+      toolDescription: "返回客户反馈的言外之意 keyInsight 与情绪强度 emotionIntensity。",
     });
-    const textBlock = (msg.content as Array<{ type: string; text?: string }>).find(
-      (b) => b.type === "text",
-    );
-    return textBlock?.text ?? "";
   }
 
-  function parse(text: string): Insight {
-    try {
-      return InsightSchema.parse(extractJson(text));
-    } catch {
-      throw new BadModelOutput("洞察返回内容无法解析");
-    }
+  function connErr(e: unknown): Response {
+    const m = e instanceof Error ? e.message : "未知错误";
+    console.error("[insight] 调用失败", { message: m });
+    return NextResponse.json({ error: `快速洞察失败:${m}` }, { status: 500 });
   }
 
   try {
-    return NextResponse.json(parse(await callText()));
+    return NextResponse.json(await getInsight());
   } catch (firstErr) {
     if (firstErr instanceof BadModelOutput) {
       try {
-        return NextResponse.json(parse(await callText()));
+        return NextResponse.json(await getInsight());
       } catch (retryErr) {
         if (retryErr instanceof BadModelOutput) {
           console.error("[insight] 两次输出均无效");
@@ -72,11 +68,5 @@ export async function POST(request: Request): Promise<Response> {
       }
     }
     return connErr(firstErr);
-  }
-
-  function connErr(e: unknown): Response {
-    const m = e instanceof Error ? e.message : "未知错误";
-    console.error("[insight] 调用失败", { message: m });
-    return NextResponse.json({ error: `快速洞察失败:${m}` }, { status: 500 });
   }
 }

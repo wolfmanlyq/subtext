@@ -22,17 +22,18 @@ function req(body: unknown): Request {
     body: JSON.stringify(body),
   });
 }
-function fakeMessage(text: string) {
-  return { content: [{ type: "text", text }] };
+function fakeToolMessage(input: unknown) {
+  return { content: [{ type: "tool_use", name: "x", input }] };
 }
 
-const insight = { keyInsight: "客户不是觉得画面不好看,而是担心好看但不卖货。", emotionIntensity: "中高" };
+const insight = { keyInsight: "k", emotionIntensity: "中高" };
 
 test("成功返回 keyInsight+emotionIntensity", async () => {
-  createMock.mockResolvedValue(fakeMessage(JSON.stringify(insight)));
+  createMock.mockResolvedValue(fakeToolMessage(insight));
   const res = await POST(req(DEMO_INPUT));
   expect(res.status).toBe(200);
   const json = await res.json();
+  expect(json.keyInsight).toBe("k");
   expect(json.emotionIntensity).toBe("中高");
 });
 
@@ -43,18 +44,34 @@ test("缺 feedback 返回 400", async () => {
 
 test("首次坏内容自动重试一次后成功", async () => {
   createMock
-    .mockResolvedValueOnce(fakeMessage("中转抽风"))
-    .mockResolvedValueOnce(fakeMessage(JSON.stringify(insight)));
+    .mockResolvedValueOnce({ content: [{ type: "text", text: "闲聊" }] })
+    .mockResolvedValueOnce(fakeToolMessage(insight));
   const res = await POST(req(DEMO_INPUT));
   expect(res.status).toBe(200);
   expect(createMock).toHaveBeenCalledTimes(2);
 });
 
 test("两次坏内容返回友好提示", async () => {
-  createMock.mockResolvedValue(fakeMessage("不是 JSON"));
+  createMock.mockResolvedValue({ content: [{ type: "text", text: "闲聊" }] });
   const res = await POST(req(DEMO_INPUT));
   expect(res.status).toBe(500);
   const json = await res.json();
   expect(json.error).toMatch(/异常|请重试/);
   expect(json.error).not.toMatch(/invalid_type|expected/);
+  expect(createMock).toHaveBeenCalledTimes(2);
+});
+
+test("连接错误返回 500 含错误信息", async () => {
+  createMock.mockRejectedValue(new Error("boom"));
+  const res = await POST(req(DEMO_INPUT));
+  expect(res.status).toBe(500);
+  const json = await res.json();
+  expect(json.error).toMatch(/boom/);
+  expect(createMock).toHaveBeenCalledTimes(1);
+});
+
+test("发送请求包含 tool_choice.type === 'tool'", async () => {
+  createMock.mockResolvedValue(fakeToolMessage(insight));
+  await POST(req(DEMO_INPUT));
+  expect(createMock.mock.calls[0][0].tool_choice.type).toBe("tool");
 });

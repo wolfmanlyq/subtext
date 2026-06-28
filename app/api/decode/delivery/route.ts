@@ -2,12 +2,10 @@ import { NextResponse } from "next/server";
 import { getClient, MODEL } from "@/lib/anthropic";
 import { CoreSchema, DeliverySchema, type Delivery } from "@/lib/schema";
 import { buildDeliveryPrompt } from "@/lib/prompts";
-import { extractJson } from "@/lib/extract-json";
+import { callStructured, BadModelOutput } from "@/lib/tool-call";
 import type { AnalyzeInput } from "@/lib/demo";
 
 export const runtime = "nodejs";
-
-class BadModelOutput extends Error {}
 
 export async function POST(request: Request): Promise<Response> {
   let body: AnalyzeInput & { core?: unknown };
@@ -36,36 +34,28 @@ export async function POST(request: Request): Promise<Response> {
     clientRole: body.clientRole,
   };
 
-  async function callText(): Promise<string> {
+  async function getDelivery(): Promise<Delivery> {
     const { system, user } = buildDeliveryPrompt(input, coreData);
-    const msg = await getClient().messages.create({
+    return callStructured({
+      client: getClient(),
       model: MODEL,
-      max_tokens: 4000,
+      maxTokens: 4000,
       system,
-      messages: [{ role: "user", content: user }],
+      content: user,
+      schema: DeliverySchema,
+      toolName: "emit_delivery",
+      toolDescription: "返回交付物(clientReply/checklist/nextActions)。",
     });
-    const textBlock = (msg.content as Array<{ type: string; text?: string }>).find(
-      (b) => b.type === "text",
-    );
-    return textBlock?.text ?? "";
-  }
-
-  function parseDelivery(text: string): Delivery {
-    try {
-      return DeliverySchema.parse(extractJson(text));
-    } catch {
-      throw new BadModelOutput("模型返回内容无法解析为交付物");
-    }
   }
 
   const FRIENDLY = "交付内容生成失败:模型返回内容异常,请重试。";
 
   try {
-    return NextResponse.json(parseDelivery(await callText()));
+    return NextResponse.json(await getDelivery());
   } catch (firstErr) {
     if (firstErr instanceof BadModelOutput) {
       try {
-        return NextResponse.json(parseDelivery(await callText()));
+        return NextResponse.json(await getDelivery());
       } catch (retryErr) {
         if (retryErr instanceof BadModelOutput) {
           console.error("[decode/delivery] 两次输出均无效");

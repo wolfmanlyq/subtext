@@ -16,7 +16,9 @@ beforeEach(() => {
 function req(body: unknown): Request {
   return new Request("http://localhost/api/decode/core", { method: "POST", body: JSON.stringify(body) });
 }
-function fakeMessage(text: string) { return { content: [{ type: "text", text }] }; }
+function fakeToolMessage(input: unknown) {
+  return { content: [{ type: "tool_use", name: "emit_core", input }] };
+}
 
 const validCore = {
   needMoreInfo: false,
@@ -29,26 +31,29 @@ const validCore = {
 const pdfAtt = { name: "brief.pdf", kind: "pdf", mediaType: "application/pdf", data: "QkFTRTY0" };
 
 test("无附件:返回 Core,不含 attachmentsDropped", async () => {
-  createMock.mockResolvedValue(fakeMessage(JSON.stringify(validCore)));
+  createMock.mockResolvedValue(fakeToolMessage(validCore));
   const res = await POST(req(DEMO_INPUT));
   expect(res.status).toBe(200);
   const json = await res.json();
   expect(json.realDemand.explicit).toContain("卖点更明确");
   expect(json.attachmentsDropped).toBeUndefined();
+  // assert tool_choice is set
+  expect(createMock.mock.calls[0][0].tool_choice.type).toBe("tool");
 });
 
 test("带 PDF:content 含 document 块", async () => {
-  createMock.mockResolvedValue(fakeMessage(JSON.stringify(validCore)));
+  createMock.mockResolvedValue(fakeToolMessage(validCore));
   const res = await POST(req({ ...DEMO_INPUT, attachments: [pdfAtt] }));
   expect(res.status).toBe(200);
   const content = createMock.mock.calls[0][0].messages[0].content;
   expect(content.some((b: { type: string }) => b.type === "document")).toBe(true);
+  expect(createMock.mock.calls[0][0].tool_choice.type).toBe("tool");
 });
 
 test("多模态失败:去掉文档块重试一次,标记 attachmentsDropped", async () => {
   createMock
     .mockImplementationOnce(() => { throw new Error("unsupported content block type document"); })
-    .mockResolvedValueOnce(fakeMessage(JSON.stringify(validCore)));
+    .mockResolvedValueOnce(fakeToolMessage(validCore));
   const res = await POST(req({ ...DEMO_INPUT, attachments: [pdfAtt] }));
   expect(res.status).toBe(200);
   const json = await res.json();
@@ -67,10 +72,10 @@ test("缺 feedback 返回 400", async () => {
   expect((await POST(req({ ...DEMO_INPUT, feedback: "" }))).status).toBe(400);
 });
 
-test("多模态联网成功但返回不可解析:去掉文档块重试一次,标记 attachmentsDropped", async () => {
+test("多模态联网成功但 tool_use 缺失:去掉文档块重试一次,标记 attachmentsDropped", async () => {
   createMock
-    .mockResolvedValueOnce(fakeMessage("(联网成功但不是 JSON)"))
-    .mockResolvedValueOnce(fakeMessage(JSON.stringify(validCore)));
+    .mockResolvedValueOnce({ content: [{ type: "text", text: "闲聊" }] })
+    .mockResolvedValueOnce(fakeToolMessage(validCore));
   const res = await POST(req({ ...DEMO_INPUT, attachments: [pdfAtt] }));
   expect(res.status).toBe(200);
   const json = await res.json();
@@ -90,15 +95,15 @@ test("无附件且 SDK 失败返回 500(不重试)", async () => {
 
 test("无附件:首次坏内容,重试一次后成功", async () => {
   createMock
-    .mockResolvedValueOnce(fakeMessage("(中转抽风)"))
-    .mockResolvedValueOnce(fakeMessage(JSON.stringify(validCore)));
+    .mockResolvedValueOnce({ content: [{ type: "text", text: "(中转抽风)" }] })
+    .mockResolvedValueOnce(fakeToolMessage(validCore));
   const res = await POST(req(DEMO_INPUT));
   expect(res.status).toBe(200);
   expect(createMock).toHaveBeenCalledTimes(2);
 });
 
 test("无附件:两次坏内容,友好提示(不暴露 Zod 原文)", async () => {
-  createMock.mockResolvedValue(fakeMessage("不是 JSON"));
+  createMock.mockResolvedValue({ content: [{ type: "text", text: "不是 JSON" }] });
   const res = await POST(req(DEMO_INPUT));
   expect(res.status).toBe(500);
   const json = await res.json();
@@ -108,7 +113,7 @@ test("无附件:两次坏内容,友好提示(不暴露 Zod 原文)", async () =>
 });
 
 test("背景字段透传进模型 prompt", async () => {
-  createMock.mockResolvedValue(fakeMessage(JSON.stringify(validCore)));
+  createMock.mockResolvedValue(fakeToolMessage(validCore));
   await POST(req({ ...DEMO_INPUT, industry: "快消", brandName: "某咖啡品牌", clientRole: "老板" }));
   const sent = createMock.mock.calls[0][0].messages[0].content;
   const text = typeof sent === "string" ? sent : sent.map((b: { text?: string }) => b.text ?? "").join("");
