@@ -106,3 +106,13 @@ test("无附件:两次坏内容,友好提示(不暴露 Zod 原文)", async () =>
   expect(json.error).not.toMatch(/invalid_type|expected|needMoreInfo/);
   expect(createMock).toHaveBeenCalledTimes(2);
 });
+
+test("背景字段透传进模型 prompt", async () => {
+  createMock.mockResolvedValue(fakeMessage(JSON.stringify(validCore)));
+  await POST(req({ ...DEMO_INPUT, industry: "快消", brandName: "某咖啡品牌", clientRole: "老板" }));
+  const sent = createMock.mock.calls[0][0].messages[0].content;
+  const text = typeof sent === "string" ? sent : sent.map((b: { text?: string }) => b.text ?? "").join("");
+  expect(text).toContain("快消");
+  expect(text).toContain("某咖啡品牌");
+  expect(text).toContain("老板");
+});

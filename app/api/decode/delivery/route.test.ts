@@ -83,3 +83,11 @@ test("SDK 连接错返回 500(不重试)", async () => {
   expect((await res.json()).error).toContain("boom");
   expect(createMock).toHaveBeenCalledTimes(1);
 });
+
+test("背景字段透传进模型 prompt", async () => {
+  createMock.mockResolvedValue(fakeMessage(JSON.stringify(validDelivery)));
+  await POST(req({ ...DEMO_INPUT, core, brandName: "某咖啡品牌", clientRole: "市场部" }));
+  const sent = createMock.mock.calls[0][0].messages[0].content;
+  expect(sent).toContain("某咖啡品牌");
+  expect(sent).toContain("市场部");
+});
