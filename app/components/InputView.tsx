@@ -11,6 +11,8 @@ import {
 const SCENES = ["新品上市", "活动促销", "社媒种草", "短视频脚本"];
 const STAGES = ["初稿反馈", "二轮修改", "执行前确认"];
 const GOALS = ["整理需求", "行动建议", "方向小样", "客户回复"];
+const INDUSTRIES = ["快消", "美妆", "3C", "汽车", "酒饮", "服饰", "文旅", "游戏", "金融", "其他"];
+const CLIENT_ROLES = ["品牌经理", "市场部", "产品负责人", "老板", "代理商", "不确定"];
 
 const KIND_BY_MEDIA: Record<string, AttachmentKind> = {
   "text/plain": "text",
@@ -71,6 +73,9 @@ export function InputView({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [files, setFiles] = useState<LoadedFile[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
+  const [industry, setIndustry] = useState("");
+  const [brandName, setBrandName] = useState("");
+  const [clientRole, setClientRole] = useState("");
 
   const customActive = !SCENES.includes(projectType);
   const selected = files.filter((f) => f.selected);
@@ -87,6 +92,9 @@ export function InputView({
   }
   function toggleGoal(g: string) {
     setGoals((p) => (p.includes(g) ? p.filter((x) => x !== g) : [...p, g]));
+  }
+  function toggleSingle(cur: string, val: string, set: (v: string) => void) {
+    set(cur === val ? "" : val);
   }
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -137,7 +145,16 @@ export function InputView({
       return;
     }
     onDecode(
-      { feedback, projectType, stage, audience: goals.join(" / "), clientStyle: "" },
+      {
+        feedback,
+        projectType,
+        stage,
+        audience: goals.join(" / "),
+        clientStyle: "",
+        industry,
+        brandName: brandName.trim(),
+        clientRole,
+      },
       attachments,
     );
   }
@@ -243,6 +260,56 @@ export function InputView({
                   {t}
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="context-card">
+          <div className="context-head">
+            <div>
+              <div className="label">Optional Context</div>
+              <h3>补充一点背景,让 Agent 更懂甲方</h3>
+              <p>不填也能解码,补充一点背景,Agent 会少猜一点。</p>
+            </div>
+          </div>
+          <div className="context-fields">
+            <div className="context-field">
+              <div className="chip-title">行业类型</div>
+              <div className="chips">
+                {INDUSTRIES.map((s) => (
+                  <button
+                    key={s}
+                    className={`chip${industry === s ? " active" : ""}`}
+                    onClick={() => toggleSingle(industry, s, setIndustry)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="context-field">
+              <div className="chip-title">品牌名称</div>
+              <input
+                aria-label="品牌名称"
+                className="brand-input"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                placeholder="例如:某连锁咖啡品牌 / 某 3C 品牌"
+              />
+            </div>
+            <div className="context-field">
+              <div className="chip-title">客户角色</div>
+              <div className="chips">
+                {CLIENT_ROLES.map((s) => (
+                  <button
+                    key={s}
+                    className={`chip${clientRole === s ? " active" : ""}`}
+                    onClick={() => toggleSingle(clientRole, s, setClientRole)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

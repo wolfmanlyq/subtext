@@ -20,7 +20,18 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "请粘贴客户反馈内容" }, { status: 400 });
   }
 
-  const { system, user } = buildInsightPrompt(body);
+  const input: AnalyzeInput = {
+    feedback: body.feedback,
+    projectType: body.projectType,
+    stage: body.stage,
+    audience: body.audience,
+    clientStyle: body.clientStyle,
+    industry: body.industry,
+    brandName: body.brandName,
+    clientRole: body.clientRole,
+  };
+
+  const { system, user } = buildInsightPrompt(input);
 
   async function callText(): Promise<string> {
     const msg = await getClient().messages.create({

@@ -39,6 +39,9 @@ export async function POST(request: Request): Promise<Response> {
     stage: body.stage,
     audience: body.audience,
     clientStyle: body.clientStyle,
+    industry: body.industry,
+    brandName: body.brandName,
+    clientRole: body.clientRole,
   };
 
   async function callModelText(dropMultimodal: boolean): Promise<string> {

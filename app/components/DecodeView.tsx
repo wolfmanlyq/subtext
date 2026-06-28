@@ -6,6 +6,14 @@ import type { Insight } from "@/lib/insight";
 import type { Prototype } from "@/lib/prototype";
 import { PrototypeGallery } from "./PrototypeGallery";
 
+function emotionClass(e?: string): string {
+  if (!e) return "alert";
+  if (/[高强]/.test(e)) return "high";
+  if (/中/.test(e)) return "thinking";
+  if (/[低平淡]/.test(e)) return "calm";
+  return "alert";
+}
+
 const STEPS = [
   { n: 1, short: "原声", full: "甲方原声带" },
   { n: 2, short: "明话", full: "他说出口的 & 他真正担心的" },
@@ -70,6 +78,7 @@ export function DecodeView({
   const [maxVisited, setMaxVisited] = useState(step);
   const [picked, setPicked] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setMaxVisited((m) => Math.max(m, step));
@@ -77,7 +86,7 @@ export function DecodeView({
   }, [step, core, onNeedSamples]);
 
   function go(n: number) {
-    setStep(Math.max(1, Math.min(7, n)));
+    setStep(Math.max(1, Math.min(8, n)));
   }
 
   async function copyReply() {
@@ -91,7 +100,7 @@ export function DecodeView({
     }
   }
 
-  const current = STEPS[step - 1];
+  const current = STEPS[step - 1] ?? { n: 8, short: "彩蛋", full: "莫生气深呼吸" };
 
   return (
     <section className="view decode-view active">
@@ -113,7 +122,7 @@ export function DecodeView({
 
       <section className="step-stage">
         <article
-          className={`step-panel glass${step === 6 ? " final-panel" : ""}`}
+          className={`step-panel glass${step === 6 ? " final-panel" : ""}${step === 8 ? " easter-panel" : ""}`}
           data-panel={step}
         >
           <div className="step-head">
@@ -145,9 +154,13 @@ export function DecodeView({
                   <>
                     {k && <div className="key-insight-line">{k}</div>}
                     <div className="grid-2 metric-grid-compact" style={{ marginTop: 14 }}>
-                      <div className="mini-card metric">
+                      <div className="mini-card metric emotion-card">
                         <strong>情绪强度</strong>
-                        <span>{e || "—"}</span>
+                        <span className={`emotion-pill ${emotionClass(e)}`}>
+                          <i className="emotion-dot" />
+                          <span className="emotion-icon">😐</span>
+                          <span>{e || "—"}</span>
+                        </span>
                       </div>
                       <div className="mini-card metric insight-metric">
                         <strong>言外之意</strong>
@@ -272,6 +285,26 @@ export function DecodeView({
           {/* Step 6 — 先给甲方看这几个方向(回复 + 清单 + 小样) */}
           {step === 6 && delivery && (
             <div className="delivery">
+              <div className="right-actions">
+                <span className="status-pill">
+                  {coreLoading && !core
+                    ? "Decoding"
+                    : core?.needMoreInfo
+                      ? "Need Confirm"
+                      : "Decoded"}
+                </span>
+                <button
+                  className="btn-ghost"
+                  type="button"
+                  onClick={(e) => {
+                    const b = e.currentTarget;
+                    b.textContent = "Exported";
+                    setTimeout(() => { b.textContent = "导出行动卡 / Export Action Card"; }, 1200);
+                  }}
+                >
+                  导出行动卡 / Export Action Card
+                </button>
+              </div>
               <div className="reply-card">
                 <h3>客户回复话术</h3>
                 <div className="reply-row">
@@ -342,6 +375,41 @@ export function DecodeView({
             </div>
           )}
 
+          {/* Step 8 — 彩蛋页 */}
+          {step === 8 && (
+            <div className="easter-card">
+              <div className="easter-kicker">MO SHENG QI · SHEN HU XI</div>
+              <h2 className="easter-title">莫｜生｜气｜深｜呼｜吸</h2>
+              <p className="easter-sub">
+                甲方的话已经翻译完了,接下来按行动卡一步步来。不是你没听懂,是有些反馈本来就需要被翻译。
+              </p>
+              <div className="calm-strip">心态超好 小问题 小场面 超温柔 时刻谨记要微笑</div>
+              <button
+                className="btn-primary knowledge-save"
+                type="button"
+                onClick={(e) => {
+                  const btn = e.currentTarget;
+                  btn.textContent = "已存入";
+                  setSaved(true);
+                  setTimeout(() => {
+                    btn.textContent = "⌁ 存入知识库";
+                    setSaved(false);
+                  }, 1400);
+                }}
+              >
+                ⌁ 存入知识库
+              </button>
+              <div className={`knowledge-toast${saved ? " show" : ""}`} aria-live="polite">
+                已存入知识库,下次更懂这位甲方。
+              </div>
+              <div className="step-actions" style={{ width: "100%", marginTop: 4 }}>
+                <button className="btn-ghost" onClick={() => go(7)}>返回行动卡</button>
+                <button className="btn-ghost" onClick={onDone}>回到首页</button>
+              </div>
+            </div>
+          )}
+
+          {step !== 8 && (
           <div className="step-actions">
             {step > 1 ? (
               <button className="btn-ghost" onClick={() => go(step - 1)}>
@@ -361,12 +429,13 @@ export function DecodeView({
                 <button className="btn-ghost" onClick={onReset}>
                   重新输入
                 </button>
-                <button className="btn-primary" onClick={onDone}>
-                  完成
+                <button className="btn-primary" onClick={() => go(8)}>
+                  完成解码
                 </button>
               </div>
             )}
           </div>
+          )}
         </article>
       </section>
     </section>

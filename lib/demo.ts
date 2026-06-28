@@ -4,6 +4,9 @@ export interface AnalyzeInput {
   stage: string;
   audience: string;
   clientStyle: string;
+  industry?: string;
+  brandName?: string;
+  clientRole?: string;
 }
 
 export const DEMO_INPUT: AnalyzeInput = {

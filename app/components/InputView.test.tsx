@@ -88,3 +88,21 @@ test("总量超限提示在抽屉关闭后仍可见(主输入卡)", async () => 
   // 主卡片上应能看到错误提示(抽屉已关)
   expect(screen.getByText(/总量超过 8MB/)).toBeInTheDocument();
 });
+
+test("填品牌名+选行业+选客户角色后,onDecode 收到三项背景;行业再点取消", async () => {
+  const onDecode = vi.fn();
+  render(<InputView loading={false} onBack={vi.fn()} onDecode={onDecode} />);
+  await userEvent.type(screen.getByLabelText("品牌名称"), "某连锁咖啡品牌");
+  await userEvent.click(screen.getByRole("button", { name: "快消" }));
+  await userEvent.click(screen.getByRole("button", { name: "品牌经理" }));
+  await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
+  const input = onDecode.mock.calls[0][0];
+  expect(input.brandName).toBe("某连锁咖啡品牌");
+  expect(input.industry).toBe("快消");
+  expect(input.clientRole).toBe("品牌经理");
+
+  onDecode.mockClear();
+  await userEvent.click(screen.getByRole("button", { name: "快消" })); // 再点取消
+  await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
+  expect(onDecode.mock.calls[0][0].industry).toBe("");
+});

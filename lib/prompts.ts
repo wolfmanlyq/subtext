@@ -2,6 +2,21 @@ import type { AnalyzeInput } from "./demo";
 import type { Attachment } from "./attachment";
 import type { Core } from "./schema";
 
+export function contextLines(input: AnalyzeInput): string {
+  const rows: string[] = [];
+  if (input.industry?.trim()) rows.push(`行业类型:${input.industry.trim()}`);
+  if (input.brandName?.trim()) rows.push(`品牌名称:${input.brandName.trim()}`);
+  if (input.clientRole?.trim()) rows.push(`客户角色:${input.clientRole.trim()}`);
+  return rows.length ? `\n\n${rows.join("\n")}` : "";
+}
+
+const CONTEXT_RULES = `
+背景字段使用规则(均可为空,不能因为没填就拒绝输出):
+- 行业类型:影响常见卖点、表达方式与周全性检查点。
+- 品牌名称:有则让给客户的回复和方向小样话术更具体;没有则绝不编造品牌。
+- 客户角色:用于判断真实关注点(品牌经理重调性/品牌安全感;产品负责人重卖点/说服力;老板重结果/确定性/少返工;市场部重传播效率;代理商重对上沟通;不确定则两条线并行)。`;
+
+
 export function buildCorePrompt(input: AnalyzeInput): { system: string; user: string } {
   const system = `你是「言外之意 Subtext」的 Client Feedback Decoder。
 你的角色是:资深广告策略顾问 + 资深 AE。你擅长从客户模糊反馈中识别真实诉求、潜台词、甲方纠结点、需要提前替客户想一遍的地方。
@@ -19,6 +34,8 @@ export function buildCorePrompt(input: AnalyzeInput): { system: string; user: st
 
 风格:像广告公司资深策略/AE;有洞察但不过度文艺;有判断但不乱猜。避免空泛词:优化、提升、加强、深化、赋能、打造、升级。
 
+${CONTEXT_RULES}
+
 严格只输出 JSON,不要 Markdown,不要解释,结构如下:
 {"needMoreInfo":false,"realDemand":{"explicit":["..."],"implicit":["..."]},"coreTension":[{"left":"...","right":"...","leftPercent":65,"rightPercent":35,"note":"..."}],"foresight":["..."],"evidence":["客户说'...' → 说明..."],"questionsToConfirm":["..."]}`;
 
@@ -28,7 +45,7 @@ ${input.feedback}
 项目场景:${input.projectType}
 当前阶段:${input.stage}
 输出目标:${input.audience}
-客户偏好/性格:${input.clientStyle || "(未提供)"}
+客户偏好/性格:${input.clientStyle || "(未提供)"}${contextLines(input)}
 
 请解码这段反馈背后的言外之意,按系统要求输出 JSON。`;
 
@@ -125,6 +142,8 @@ export function buildInsightPrompt(input: AnalyzeInput): { system: string; user:
 - keyInsight:言外之意一句话,写成"客户不是X,而是Y"的潜台词揭示句式,犀利、抓痛点,不要平淡总结。
 - emotionIntensity:客户情绪强度(如"中高""偏强,像替老板转达")。
 
+${CONTEXT_RULES}
+
 严格只输出 JSON,不要 Markdown,不要解释:
 {"keyInsight":"客户不是...,而是...","emotionIntensity":"..."}`;
 
@@ -132,7 +151,7 @@ export function buildInsightPrompt(input: AnalyzeInput): { system: string; user:
 ${input.feedback}
 
 项目场景:${input.projectType}
-当前阶段:${input.stage}
+当前阶段:${input.stage}${contextLines(input)}
 
 请只输出上述两项 JSON。`;
 
@@ -149,6 +168,8 @@ export function buildDeliveryPrompt(input: AnalyzeInput, core: Core): { system: 
 
 避免空泛词:优化、提升、加强、深化、赋能、打造、升级。
 
+${CONTEXT_RULES}
+
 严格只输出 JSON,不要 Markdown,不要解释,结构如下:
 {"clientReply":"...","checklist":["..."],"nextActions":[{"role":"设计","title":"...","detail":"...","reason":"..."}]}`;
 
@@ -158,7 +179,7 @@ ${input.feedback}
 
 项目场景:${input.projectType}
 当前阶段:${input.stage}
-输出目标:${input.audience}
+输出目标:${input.audience}${contextLines(input)}
 
 【已完成的分析结论】
 他说出口的:${core.realDemand.explicit.join("、") || "(无)"}
