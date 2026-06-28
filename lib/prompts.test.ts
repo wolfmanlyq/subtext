@@ -14,16 +14,19 @@ test("buildAnalyzePrompt 含 system、要求 JSON 输出、拼入用户输入", 
   const { system, user } = buildAnalyzePrompt(input);
   expect(system).toMatch(/广告/);
   expect(system).toMatch(/JSON/);
-  expect(system).toContain("agentJudgment");
-  expect(system).toContain("roleActions");
+  expect(system).toContain("keyInsight");
+  expect(system).toContain("coreTension");
+  expect(system).toContain("nextActions");
   expect(user).toContain("再高级一点");
   expect(user).toContain("品牌海报");
 });
 
-test("buildPrototypePrompt 要求自包含 HTML 且并入需求摘要", () => {
+test("buildPrototypePrompt 要求自包含 HTML、含 name/highlight/recommend 且并入需求摘要", () => {
   const { system, user } = buildPrototypePrompt("客户要更想喝", "原始反馈文本");
   expect(system).toMatch(/HTML/);
   expect(system).toMatch(/内联|inline|自包含/);
+  expect(system).toContain("highlight");
+  expect(system).toContain("recommend");
   expect(user).toContain("客户要更想喝");
   expect(user).toContain("原始反馈文本");
 });

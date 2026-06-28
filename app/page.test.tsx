@@ -7,27 +7,27 @@ beforeEach(() => vi.restoreAllMocks());
 
 const card = {
   needMoreInfo: false,
-  emotionIntensity: "中等偏强",
-  agentJudgment: "复合修改,不是单点意见",
-  feedbackTypes: ["产品卖点"],
-  explicitNeeds: ["卖点更明确"],
-  implicitNeeds: ["促进到店"],
-  conflicts: [{ left: "想要年轻化", right: "不能太网红" }],
-  risks: ["只加强活动信息会显廉价"],
-  evidence: ["客户先认可视觉好看"],
-  questionsToAsk: [],
-  roleActions: [{ role: "设计", title: "重排层级", desc: "放大产品杯" }],
+  emotionIntensity: "中高",
+  keyInsight: "客户不是觉得画面不好看,而是担心广告好看但不卖货。",
+  realDemand: { explicit: ["卖点更明确"], implicit: ["促进到店"] },
+  coreTension: [
+    { left: "年轻化", right: "品牌质感", leftPercent: 65, rightPercent: 35, note: "想年轻又怕掉质感" },
+  ],
+  foresight: ["下一轮客户可能会问:用户为什么现在买"],
+  evidence: ["客户先认可视觉好看 → 说明问题不是审美"],
+  questionsToConfirm: [],
+  nextActions: [{ role: "设计", title: "重排层级", detail: "放大产品杯", reason: "补产品吸引力" }],
   checklist: ["强化产品卖点"],
-  replyScript: "收到,我们理解……",
+  clientReply: "收到,我们理解……",
 };
 
 const samples = {
   prototypes: [
-    { strategy: "食欲感强化版", html: "<h1>A</h1>", solvesFeedback: "产品吸引力", risk: "偏产品感", priority: "高" },
+    { name: "食欲感强化版", strategy: "先勾食欲", sampleCopy: "白桃冰美式", highlight: "第一眼想喝", recommend: "主推方向", html: "<h1>A</h1>" },
   ],
 };
 
-test("着陆→工作台→输入→解码:展示真实数据并在第7步生成小样", async () => {
+test("着陆→工作台→输入→解码:展示真实数据并在第6步生成小样", async () => {
   vi.stubGlobal(
     "fetch",
     vi
@@ -38,12 +38,12 @@ test("着陆→工作台→输入→解码:展示真实数据并在第7步生成
 
   render(<Page />);
   await userEvent.click(screen.getByRole("button", { name: /Start Now/ }));
-  await userEvent.click(screen.getByRole("button", { name: /放入客户信号/ }));
+  await userEvent.click(screen.getByRole("button", { name: /甲方爸爸的话/ }));
   await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
 
-  await waitFor(() => expect(screen.getByText("中等偏强")).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("中高")).toBeInTheDocument());
 
-  await userEvent.click(screen.getByRole("button", { name: /交付/ }));
+  await userEvent.click(screen.getByRole("button", { name: /方向/ }));
   await waitFor(() => expect(screen.getByText("食欲感强化版")).toBeInTheDocument());
   expect(document.querySelector("iframe")).not.toBeNull();
 });
@@ -55,7 +55,7 @@ test("analyze 失败时在输入页展示错误", async () => {
   );
   render(<Page />);
   await userEvent.click(screen.getByRole("button", { name: /Start Now/ }));
-  await userEvent.click(screen.getByRole("button", { name: /放入客户信号/ }));
+  await userEvent.click(screen.getByRole("button", { name: /甲方爸爸的话/ }));
   await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
   await waitFor(() => expect(screen.getByText(/炸了/)).toBeInTheDocument());
 });

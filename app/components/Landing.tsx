@@ -10,9 +10,9 @@ export function Landing({ onStart }: { onStart: () => void }) {
           <span>Subtext</span>
         </div>
         <p className="slogan">
-          客户不是觉得画面不好看,
+          听懂客户没说出口的部分,
           <br />
-          而是担心广告<strong>好看但不卖货</strong>。
+          把模糊反馈变成下一步行动。
         </p>
         <button className="btn-primary" onClick={onStart}>
           Start Now 开始解码

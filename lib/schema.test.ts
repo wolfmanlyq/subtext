@@ -3,48 +3,54 @@ import { ActionCardSchema } from "./schema";
 
 const valid = {
   needMoreInfo: false,
-  emotionIntensity: "中等偏强",
-  agentJudgment: "复合修改,不是单点意见",
-  feedbackTypes: ["产品卖点", "活动信息", "调性"],
-  explicitNeeds: ["产品要更有想喝的感觉"],
-  implicitNeeds: ["希望促进到店购买"],
-  conflicts: [{ left: "想要年轻化", right: "不能太网红" }],
-  risks: ["只加强活动信息可能变成廉价促销海报"],
-  evidence: ["客户先认可视觉好看,说明问题不是单纯审美"],
-  questionsToAsk: ["“年轻一点”指视觉还是文案?"],
-  roleActions: [{ role: "设计", title: "重排层级", desc: "放大产品杯与水珠" }],
-  checklist: ["强化产品口感卖点"],
-  replyScript: "收到,我们理解……",
+  emotionIntensity: "中高",
+  keyInsight: "客户不是觉得画面不好看,而是担心广告好看但不卖货。",
+  realDemand: {
+    explicit: ["产品本身要更有想喝的感觉"],
+    implicit: ["客户希望下一版能解释用户为什么现在要买"],
+  },
+  coreTension: [
+    { left: "年轻化", right: "品牌质感", leftPercent: 65, rightPercent: 35, note: "想要年轻化但不想牺牲品牌安全感。" },
+  ],
+  foresight: ["客户可能会继续问:用户为什么现在要买?"],
+  evidence: ["客户先认可视觉好看 → 说明问题不是单纯审美"],
+  questionsToConfirm: ["这次更想优先强化想喝感还是活动利益?"],
+  nextActions: [
+    { role: "设计", title: "重排视觉层级", detail: "放大产品杯与水珠", reason: "客户已认可氛围,要补的是产品吸引力" },
+  ],
+  checklist: ["把第二杯半价从角落移到主视觉利益点标签"],
+  clientReply: "收到,我们理解……",
 };
 
-test("ActionCardSchema 接受完整 7 步字段对象", () => {
+test("ActionCardSchema 接受完整原型3结构", () => {
   const parsed = ActionCardSchema.parse(valid);
-  expect(parsed.conflicts[0].left).toBe("想要年轻化");
-  expect(parsed.roleActions[0].role).toBe("设计");
-  expect(parsed.checklist).toHaveLength(1);
+  expect(parsed.keyInsight).toContain("不卖货");
+  expect(parsed.realDemand.explicit).toHaveLength(1);
+  expect(parsed.coreTension[0].leftPercent).toBe(65);
+  expect(parsed.nextActions[0].role).toBe("设计");
 });
 
-test("缺字段被拒绝", () => {
-  const { conflicts, ...missing } = valid;
-  void conflicts;
-  expect(ActionCardSchema.safeParse(missing).success).toBe(false);
+test("coreTension 百分比缺失被拒绝", () => {
+  const bad = {
+    ...valid,
+    coreTension: [{ left: "A", right: "B", note: "x" }],
+  };
+  expect(ActionCardSchema.safeParse(bad).success).toBe(false);
 });
 
-test("needMoreInfo=true 时其余可为空数组/空串", () => {
+test("needMoreInfo=true 时其余可为空", () => {
   const partial = {
     needMoreInfo: true,
     emotionIntensity: "",
-    agentJudgment: "",
-    feedbackTypes: [],
-    explicitNeeds: [],
-    implicitNeeds: [],
-    conflicts: [],
-    risks: [],
+    keyInsight: "",
+    realDemand: { explicit: [], implicit: [] },
+    coreTension: [],
+    foresight: [],
     evidence: [],
-    questionsToAsk: ["请提供上一版方案摘要"],
-    roleActions: [],
+    questionsToConfirm: ["请提供上一版方案摘要"],
+    nextActions: [],
     checklist: [],
-    replyScript: "",
+    clientReply: "",
   };
   expect(ActionCardSchema.parse(partial).needMoreInfo).toBe(true);
 });

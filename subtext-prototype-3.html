@@ -1,0 +1,3519 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>言外之意 Subtext｜Client Feedback Decoder</title>
+  <style>
+    @font-face {
+      font-family: "SubtextTitle";
+      src:
+        url("/mnt/data/STZHONGS.TTF") format("truetype"),
+        url("../STZHONGS.TTF") format("truetype"),
+        url("STZHONGS.TTF") format("truetype");
+      font-display: swap;
+    }
+
+    :root {
+      --deep: #101522;
+      --deep-2: #172033;
+      --fog: #f4f1ea;
+      --mist: #e8e2d5;
+      --sand: #c9b79a;
+      --gold: #d8c27a;
+      --gold-soft: #f0dfad;
+      --blue-haze: rgba(125, 140, 255, .22);
+      --ink: #f7f3ea;
+      --muted: rgba(244, 241, 234, .68);
+      --dim: rgba(244, 241, 234, .48);
+      --line: rgba(244, 241, 234, .18);
+      --danger: #f2a693;
+      --ok: #aee4c7;
+      --button-bg: rgba(255,255,255,.68);
+      --button-border: rgba(255,255,255,.42);
+      --button-dot: #e7b2a2;
+      --radius-lg: 30px;
+      --radius-md: 22px;
+      --shadow: 0 34px 95px rgba(5, 8, 16, .34);
+      --title-font: "SubtextTitle", "STZhongsong", "FZYaoti", "KaiTi", "Kaiti SC", "Microsoft YaHei", serif;
+      --body-font: "Inter", "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--body-font);
+      color: var(--ink);
+      background:
+        linear-gradient(152deg, rgba(16,21,34,.95) 0%, rgba(32,38,54,.88) 38%, rgba(89,82,71,.58) 76%, rgba(16,21,34,.96) 100%),
+        radial-gradient(ellipse at 32% 12%, rgba(244,241,234,.20), transparent 38%),
+        radial-gradient(ellipse at 78% 18%, rgba(125,140,255,.18), transparent 34%),
+        #101522;
+      overflow-x: hidden;
+    }
+
+    button, textarea { font: inherit; }
+    button { border: 0; cursor: pointer; }
+
+    .scene {
+      position: relative;
+      min-height: 100vh;
+      padding: clamp(22px, 3vw, 46px);
+      isolation: isolate;
+      display: grid;
+    }
+
+    .scene::before,
+    .scene::after {
+      content: "";
+      position: fixed;
+      inset: auto -8vw -20vh -8vw;
+      height: 56vh;
+      pointer-events: none;
+      z-index: -2;
+      background:
+        radial-gradient(ellipse at 24% 36%, rgba(244,241,234,.18), transparent 40%),
+        radial-gradient(ellipse at 76% 25%, rgba(201,183,154,.20), transparent 42%),
+        linear-gradient(178deg, transparent 0%, rgba(244,241,234,.09) 32%, rgba(8,10,18,.34) 100%);
+      filter: blur(4px);
+      transform: skewY(-4deg);
+    }
+
+    .scene::after {
+      inset: 4vh -12vw auto -12vw;
+      height: 50vh;
+      background:
+        linear-gradient(122deg, transparent 0 28%, rgba(244,241,234,.075) 42%, transparent 62%),
+        linear-gradient(205deg, transparent 0 44%, rgba(216,194,122,.08) 58%, transparent 76%);
+      filter: blur(18px);
+      z-index: -1;
+      transform: none;
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      opacity: .16;
+      background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px);
+      mix-blend-mode: overlay;
+    }
+
+    .view {
+      display: none;
+      min-height: calc(100vh - clamp(44px, 6vw, 92px));
+      animation: fadeIn .72s ease both;
+    }
+
+    .view.active { display: grid; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); filter: blur(8px); }
+      to { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+
+    .glass {
+      border: 1px solid rgba(244,241,234,.16);
+      background:
+        linear-gradient(145deg, rgba(244,241,234,.14), rgba(244,241,234,.048)),
+        linear-gradient(180deg, rgba(255,255,255,.07), transparent);
+      backdrop-filter: blur(26px) saturate(1.12);
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.18);
+    }
+
+    .label {
+      color: var(--gold-soft);
+      font-size: 11px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-weight: 820;
+    }
+
+    .btn-primary {
+      min-height: 48px;
+      padding: 0 24px;
+      border-radius: 999px;
+      color: rgba(16,21,34,.92);
+      background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.58));
+      border: 1px solid var(--button-border);
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.62),
+        inset 0 -10px 24px rgba(255,255,255,.12),
+        0 12px 34px rgba(0,0,0,.24);
+      backdrop-filter: blur(18px) saturate(1.1);
+      font-family: var(--title-font);
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: .02em;
+      transition: transform .18s, box-shadow .18s, background .18s, border-color .18s;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-primary::after {
+      content: none;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255,255,255,.62);
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.66));
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.72),
+        0 16px 42px rgba(0,0,0,.28),
+        0 0 24px rgba(216,194,122,.12);
+    }
+
+    .btn-primary:active {
+      transform: translateY(1px) scale(.99);
+      box-shadow:
+        inset 0 2px 8px rgba(0,0,0,.10),
+        0 8px 24px rgba(0,0,0,.20);
+    }
+
+    .btn-ghost {
+      min-height: 42px;
+      padding: 0 18px;
+      border-radius: 999px;
+      color: rgba(16,21,34,.88);
+      background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.48));
+      border: 1px solid rgba(255,255,255,.42);
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.58),
+        0 10px 30px rgba(0,0,0,.22);
+      font-family: var(--title-font);
+      font-size: 15px;
+      font-weight: 700;
+      backdrop-filter: blur(16px);
+      transition: transform .18s, box-shadow .18s, background .18s;
+      position: relative;
+    }
+
+    .btn-ghost:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(180deg, rgba(255,255,255,.86), rgba(255,255,255,.58));
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.7),
+        0 14px 34px rgba(0,0,0,.25),
+        0 0 20px rgba(216,194,122,.10);
+    }
+
+    .btn-ghost:active {
+      transform: translateY(1px) scale(.99);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,.10), 0 7px 20px rgba(0,0,0,.18);
+    }
+
+    .landing {
+      place-items: center;
+      text-align: center;
+    }
+
+    .landing-inner {
+      width: min(980px, 100%);
+      display: grid;
+      justify-items: center;
+      gap: 28px;
+      padding: 60px 20px;
+    }
+
+    .brand-logo {
+      opacity: 0;
+      animation: logoIn 1.15s ease .15s forwards;
+    }
+
+    .brand-logo .label {
+      margin-bottom: 16px;
+      text-shadow: 0 0 28px rgba(216,194,122,.28);
+    }
+
+    .brand-logo h1 {
+      margin: 0;
+      font-size: clamp(42px, 6.2vw, 78px);
+      line-height: 1;
+      font-family: var(--title-font);
+      font-weight: 620;
+      letter-spacing: .08em;
+      color: rgba(255,252,244,.97);
+      text-shadow: 0 22px 86px rgba(244,241,234,.15);
+    }
+
+    .brand-logo span {
+      display: block;
+      margin-top: 10px;
+      color: var(--dim);
+      font-size: 17px;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+    }
+
+    .slogan {
+      margin: 0;
+      opacity: 0;
+      animation: logoIn 1.1s ease .75s forwards;
+      max-width: 830px;
+      color: var(--fog);
+      font-size: clamp(24px, 3.1vw, 44px);
+      line-height: 1.28;
+      font-family: var(--title-font);
+      font-weight: 580;
+      letter-spacing: .02em;
+    }
+
+    .slogan strong {
+      color: var(--gold-soft);
+      font-weight: 660;
+      text-shadow: 0 0 36px rgba(216,194,122,.32);
+    }
+
+    .landing .btn-primary {
+      opacity: 0;
+      animation: logoIn .9s ease 1.25s forwards;
+      min-height: 52px;
+      padding: 0 28px;
+      color: #fff;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.22), transparent 42%),
+        linear-gradient(105deg, #6677ff 0%, #9d7cff 48%, #f0a48f 100%);
+      border: 1px solid rgba(12,16,28,.80);
+      box-shadow:
+        inset 0 1px 1px rgba(255,255,255,.42),
+        inset 0 -16px 30px rgba(0,0,0,.16),
+        0 16px 42px rgba(8,11,18,.40),
+        0 0 32px rgba(125,140,255,.22);
+      font-family: var(--body-font);
+      font-size: 0;
+      letter-spacing: 0;
+    }
+
+    .landing .btn-primary::before {
+      content: "Start Now";
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    .landing .btn-primary::after {
+      content: "开始解码";
+      display: block;
+      width: auto;
+      height: auto;
+      margin-left: 2px;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      color: rgba(255,255,255,.74);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .landing .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow:
+        inset 0 1px 1px rgba(255,255,255,.55),
+        inset 0 -16px 30px rgba(0,0,0,.14),
+        0 20px 52px rgba(8,11,18,.42),
+        0 0 40px rgba(240,164,143,.28);
+    }
+
+    .landing .btn-primary:active {
+      transform: translateY(1px) scale(.99);
+    }
+
+    @keyframes logoIn {
+      from { opacity: 0; transform: translateY(18px); filter: blur(10px); }
+      to { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+
+    .input-view {
+      place-items: center;
+    }
+
+    .input-card {
+      width: min(1040px, 100%);
+      border-radius: var(--radius-lg);
+      padding: clamp(22px, 3vw, 34px);
+    }
+
+    .input-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .input-head h2 {
+      margin: 7px 0 0;
+      font-size: clamp(28px, 3vw, 42px);
+      font-family: var(--title-font);
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+
+    .input-head p {
+      margin: 7px 0 0;
+      color: var(--dim);
+      font-size: 13px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 230px;
+      resize: vertical;
+      color: rgba(255,252,244,.92);
+      line-height: 1.68;
+      font-size: 14px;
+      border-radius: 24px;
+      padding: 18px;
+      border: 1px solid rgba(244,241,234,.13);
+      outline: none;
+      background:
+        linear-gradient(180deg, rgba(8,11,18,.34), rgba(8,11,18,.20)),
+        rgba(244,241,234,.04);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 20px 70px rgba(0,0,0,.12);
+      backdrop-filter: blur(18px);
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    textarea:focus {
+      border-color: rgba(216,194,122,.46);
+      box-shadow: 0 0 0 5px rgba(216,194,122,.08), inset 0 20px 70px rgba(0,0,0,.14);
+    }
+
+    .chip-groups {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 18px 0 24px;
+    }
+
+    .chip-group { display: grid; gap: 9px; }
+
+    .chip-title {
+      color: var(--dim);
+      font-size: 12px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      min-height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      color: #1e1e1e;
+      border: 2px solid var(--button-border);
+      background: #ececec;
+      box-shadow: 3px 3px 0 var(--button-border);
+      font-family: var(--title-font);
+      font-weight: 700;
+      font-size: 12px;
+      transition: transform .16s, box-shadow .16s, background .16s;
+    }
+
+    .chip.active,
+    .chip:hover {
+      color: #1e1e1e;
+      background: #f6d5ca;
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 var(--button-border);
+    }
+
+    .chip:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 var(--button-border);
+    }
+
+    .input-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .decode-view {
+      align-content: start;
+      gap: 22px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 18px;
+      z-index: 10;
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      border-radius: 999px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(84px, 1fr));
+      gap: 8px;
+    }
+
+    .nav-step {
+      min-height: 52px;
+      border-radius: 999px;
+      color: #1e1e1e;
+      border: 2px solid var(--button-border);
+      background: #ececec;
+      box-shadow: 4px 4px 0 var(--button-border);
+      transition: transform .16s, box-shadow .16s, background .16s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      font-family: var(--title-font);
+      font-weight: 700;
+      padding: 0 11px;
+    }
+
+    .nav-step.done {
+      background: #f6eadf;
+    }
+
+    .nav-step.done::after {
+      content: "✓";
+      font-size: 11px;
+    }
+
+    .nav-step.active {
+      background: #f2f2f2;
+      box-shadow: 6px 6px 0 var(--button-border), 0 0 32px rgba(231,178,162,.18);
+      transform: translate(-1px, -1px);
+    }
+
+    .nav-step:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 var(--button-border);
+    }
+
+    .nav-num {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--button-dot);
+      border: 2px solid var(--button-border);
+      font-size: 13px;
+      line-height: 1;
+      flex: 0 0 auto;
+    }
+
+    .nav-label {
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .nav-step.active .nav-label {
+      font-size: 15px;
+    }
+
+    .step-stage {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      min-height: 620px;
+      display: grid;
+      align-items: center;
+    }
+
+    .step-panel {
+      display: none;
+      border-radius: var(--radius-lg);
+      padding: clamp(22px, 3vw, 36px);
+      animation: panelIn .5s ease both;
+    }
+
+    .step-panel.active { display: block; }
+
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(14px); filter: blur(8px); }
+      to { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+
+    .step-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .step-head h2 {
+      margin: 8px 0 0;
+      font-size: clamp(30px, 4vw, 54px);
+      line-height: 1.1;
+      font-family: var(--title-font);
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+
+    .brand-logo h1,
+    .slogan,
+    .input-head h2,
+    .step-head h2,
+    .btn-primary,
+    .btn-ghost,
+    .nav-step {
+      text-wrap: balance;
+    }
+
+    .step-head p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 600px;
+    }
+
+    .status-pill {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 9px 13px;
+      color: var(--gold-soft);
+      background: rgba(216,194,122,.09);
+      border: 1px solid rgba(216,194,122,.26);
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .grid-2,
+    .grid-3,
+    .grid-4,
+    .grid-5 {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .grid-5 { grid-template-columns: repeat(5, 1fr); }
+
+    .mini-card,
+    .vs-card,
+    .question-card,
+    .role-card,
+    .sample-card,
+    .reply-card {
+      border-radius: 22px;
+      border: 1px solid rgba(244,241,234,.12);
+      background:
+        linear-gradient(145deg, rgba(244,241,234,.12), rgba(244,241,234,.045));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+      padding: 18px;
+    }
+
+    .mini-card h3,
+    .role-card h3,
+    .reply-card h3,
+    .sample-card h3 {
+      color: #1e1e1e;
+    }
+
+    .sample-card p {
+      color: #3b3b3b;
+    }
+
+    .sample-card h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      font-weight: 620;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.48;
+    }
+
+    li {
+      position: relative;
+      padding-left: 16px;
+    }
+
+    li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .62em;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(216,194,122,.72);
+    }
+
+    .quote {
+      color: var(--mist);
+      line-height: 1.72;
+      font-size: 16px;
+      padding: 22px;
+      border-radius: 24px;
+      background: rgba(8,11,18,.20);
+      border: 1px solid rgba(244,241,234,.10);
+    }
+
+    .metric {
+      display: grid;
+      gap: 8px;
+      align-content: start;
+      min-height: 130px;
+    }
+
+    .metric strong {
+      color: var(--gold-soft);
+      font-size: 13px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+    }
+
+    .metric span {
+      color: var(--mist);
+      font-size: 22px;
+      line-height: 1.25;
+      font-weight: 620;
+    }
+
+    .vs-card {
+      display: grid;
+      grid-template-columns: 1fr 48px 1fr;
+      align-items: center;
+      gap: 10px;
+      min-height: 100px;
+      background:
+        linear-gradient(90deg, rgba(125,140,255,.09), rgba(244,241,234,.055), rgba(216,194,122,.09));
+    }
+
+    .vs-card strong {
+      color: var(--mist);
+      font-size: 18px;
+      line-height: 1.28;
+      font-weight: 650;
+    }
+
+    .vs-card b {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--gold-soft);
+      background: rgba(244,241,234,.065);
+      border: 1px solid rgba(216,194,122,.26);
+      font-size: 11px;
+      letter-spacing: .1em;
+    }
+
+    .risk-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .risk-item {
+      border-left: 3px solid rgba(242,166,147,.7);
+      padding: 13px 15px;
+      border-radius: 0 18px 18px 0;
+      background: rgba(242,166,147,.06);
+      color: var(--muted);
+      line-height: 1.52;
+    }
+
+    .question-card {
+      min-height: 135px;
+      color: var(--muted);
+      line-height: 1.55;
+      text-align: left;
+      transition: transform .16s, box-shadow .16s, background .16s;
+    }
+
+    .question-card:hover,
+    .question-card.active,
+    .sample-card.active {
+      transform: translate(-3px, -3px);
+      box-shadow: 7px 7px 0 var(--button-border);
+    }
+
+    .question-card,
+    .sample-card {
+      cursor: pointer;
+    }
+
+    .generated-line,
+    .sample-judgement {
+      margin-top: 16px;
+      padding: 16px 18px;
+      border-radius: 22px;
+      color: var(--mist);
+      background: rgba(216,194,122,.075);
+      border: 1px solid rgba(216,194,122,.22);
+      line-height: 1.65;
+    }
+
+    .role-card {
+      min-height: 155px;
+    }
+
+    .role-card b {
+      display: block;
+      color: var(--gold-soft);
+      margin-bottom: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .role-card p,
+    .sample-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .delivery {
+      display: grid;
+      gap: 16px;
+    }
+
+    .reply-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .bubble {
+      padding: 18px 20px;
+      border-radius: 22px 22px 22px 6px;
+      color: rgba(244,241,234,.84);
+      background: linear-gradient(160deg, rgba(125,140,255,.105), rgba(244,241,234,.055));
+      border: 1px solid rgba(244,241,234,.12);
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .sample-card {
+      position: relative;
+      min-height: 245px;
+      overflow: hidden;
+      text-align: left;
+      transition: transform .16s, box-shadow .16s, background .16s;
+    }
+
+    .question-card,
+    .sample-card {
+      border: 2px solid var(--button-border);
+      box-shadow: 4px 4px 0 var(--button-border);
+    }
+
+    .question-card {
+      color: #1e1e1e;
+      background: #f2f2f2;
+      font-family: var(--title-font);
+      font-size: 16px;
+      font-weight: 650;
+    }
+
+    .sample-card {
+      background: #f2f2f2;
+      color: #1e1e1e;
+    }
+
+    .question-card:active,
+    .sample-card:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 var(--button-border);
+    }
+
+    .sample-card::before {
+      content: attr(data-letter);
+      position: absolute;
+      right: 14px;
+      top: 0;
+      color: rgba(30,30,30,.07);
+      font-size: 88px;
+      line-height: 1;
+      font-weight: 840;
+    }
+
+    .sample-card b {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      margin-bottom: 14px;
+      border-radius: 50%;
+      color: #1e1e1e;
+      border: 2px solid var(--button-border);
+      background: var(--button-dot);
+    }
+
+    .sample-card .line {
+      margin-top: 14px;
+      color: #1e1e1e;
+      font-size: 16px;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+
+    .sample-card .risk {
+      margin-top: 14px;
+      color: #8f4639;
+      font-size: 13px;
+    }
+
+    .step-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    .right-actions {
+      display: flex;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    /* Product UI buttons: glass system. Landing keeps its gradient override above. */
+    .chip,
+    .nav-step,
+    .question-card,
+    .sample-card {
+      border: 1px solid rgba(255,255,255,.38);
+      background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.42));
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.58),
+        inset 0 -10px 24px rgba(255,255,255,.08),
+        0 10px 30px rgba(0,0,0,.22);
+      backdrop-filter: blur(18px) saturate(1.08);
+      color: rgba(16,21,34,.88);
+    }
+
+    .chip {
+      font-family: var(--body-font);
+      font-weight: 650;
+    }
+
+    .chip.active,
+    .chip:hover,
+    .question-card:hover,
+    .question-card.active,
+    .sample-card:hover,
+    .sample-card.active {
+      transform: translateY(-2px);
+      border-color: rgba(255,255,255,.62);
+      background: linear-gradient(180deg, rgba(255,246,241,.86), rgba(255,255,255,.55));
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.72),
+        0 14px 34px rgba(0,0,0,.25),
+        0 0 22px rgba(216,194,122,.12);
+    }
+
+    .chip:active,
+    .question-card:active,
+    .sample-card:active {
+      transform: translateY(1px) scale(.99);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,.10), 0 7px 20px rgba(0,0,0,.18);
+    }
+
+    .nav-step {
+      color: rgba(244,241,234,.56);
+      background: rgba(255,255,255,.08);
+      border-color: rgba(255,255,255,.14);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.12), 0 8px 22px rgba(0,0,0,.12);
+      opacity: .64;
+      position: relative;
+    }
+
+    .nav-step.done {
+      color: rgba(240,223,173,.72);
+      background: rgba(216,194,122,.10);
+      border-color: rgba(216,194,122,.18);
+      opacity: .82;
+    }
+
+    .nav-step.done::after {
+      content: "✓";
+      font-size: 11px;
+    }
+
+    .nav-step.active {
+      color: rgba(16,21,34,.92);
+      background: linear-gradient(180deg, rgba(255,255,255,.84), rgba(255,235,227,.66));
+      border-color: rgba(255,255,255,.62);
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.70),
+        0 14px 34px rgba(0,0,0,.24),
+        0 0 30px rgba(216,194,122,.18);
+      transform: translateY(-2px);
+      opacity: 1;
+    }
+
+    .nav-step.active::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -18px;
+      width: 1px;
+      height: 18px;
+      background: linear-gradient(180deg, rgba(240,223,173,.92), rgba(240,223,173,0));
+      transform: translateX(-50%);
+    }
+
+    .nav-step.active::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -23px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--gold-soft);
+      box-shadow: 0 0 18px rgba(216,194,122,.56);
+      transform: translateX(-50%);
+    }
+
+    .nav-num {
+      background: rgba(255,255,255,.22);
+      border: 1px solid rgba(255,255,255,.26);
+    }
+
+    .nav-step.active .nav-num {
+      background: var(--button-dot);
+      border-color: rgba(16,21,34,.18);
+    }
+
+    .step-stage {
+      padding-top: 4px;
+    }
+
+    .step-panel {
+      position: relative;
+      overflow: visible;
+    }
+
+    .step-panel.active::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -12px;
+      width: 72px;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, rgba(240,223,173,.9), transparent);
+      box-shadow: 0 0 18px rgba(216,194,122,.28);
+      transform: translateX(-50%);
+    }
+
+    .question-card {
+      font-family: var(--body-font);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .sample-card {
+      color: rgba(16,21,34,.90);
+      padding-bottom: 64px;
+    }
+
+    .sample-card h3,
+    .sample-card p,
+    .sample-card .line {
+      color: rgba(16,21,34,.90);
+    }
+
+    .sample-card .risk {
+      color: #9d5142;
+    }
+
+    .sample-card b {
+      color: rgba(16,21,34,.9);
+      border: 1px solid rgba(16,21,34,.12);
+      background: rgba(231,178,162,.78);
+    }
+
+    .download-sample {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 16px;
+      min-height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: rgba(16,21,34,.86);
+      background: rgba(255,255,255,.58);
+      border: 1px solid rgba(255,255,255,.50);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.62), 0 8px 18px rgba(0,0,0,.12);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .final-panel {
+      background:
+        linear-gradient(145deg, rgba(244,241,234,.18), rgba(244,241,234,.06)),
+        radial-gradient(ellipse at 76% 10%, rgba(216,194,122,.14), transparent 42%);
+    }
+
+    .final-panel .step-head {
+      align-items: center;
+    }
+
+    .checklist li::before {
+      content: "✓";
+      top: 0;
+      width: auto;
+      height: auto;
+      color: var(--gold-soft);
+      background: transparent;
+      font-weight: 900;
+    }
+
+    @media (max-width: 960px) {
+      .chip-groups,
+      .grid-2,
+      .grid-3,
+      .grid-4,
+      .grid-5,
+      .reply-row {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        position: static;
+        grid-template-columns: repeat(7, minmax(38px, 1fr));
+        padding: 8px;
+      }
+
+      .nav-step {
+        min-height: 44px;
+        padding: 0 7px;
+      }
+
+      .nav-label {
+        display: none;
+      }
+
+      .step-head {
+        display: block;
+      }
+
+      .vs-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+    }
+
+    /* Bright nature theme: sky, grass, frosted floating rooms. */
+    :root {
+      --ink: #1f2428;
+      --fog: #1f2428;
+      --mist: #2a2f33;
+      --muted: #687178;
+      --dim: #7c868d;
+      --line: rgba(255,255,255,.56);
+      --gold-soft: #6ca36b;
+      --gold: #8fb876;
+      --danger: #c97464;
+      --button-bg: rgba(255,255,255,.68);
+      --button-border: rgba(255,255,255,.54);
+      --button-dot: #9fd4ff;
+      --shadow: 0 28px 80px rgba(64, 94, 74, .18);
+    }
+
+    body {
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 18% 10%, rgba(255,255,255,.72), transparent 18%),
+        radial-gradient(circle at 78% 20%, rgba(202,224,255,.72), transparent 24%),
+        radial-gradient(ellipse at 50% 72%, rgba(165,203,116,.86), transparent 34%),
+        linear-gradient(180deg, #b9d9f3 0%, #d9ebf3 38%, #d5e5b8 60%, #8dbb67 100%);
+    }
+
+    .scene::before {
+      inset: auto -10vw -18vh -10vw;
+      height: 60vh;
+      background:
+        radial-gradient(ellipse at 18% 34%, rgba(255,255,255,.34), transparent 42%),
+        radial-gradient(ellipse at 78% 28%, rgba(255,255,255,.22), transparent 44%),
+        linear-gradient(175deg, transparent 0%, rgba(123,168,83,.28) 30%, rgba(83,128,61,.28) 100%);
+      filter: blur(10px);
+      transform: skewY(-5deg);
+    }
+
+    .scene::after {
+      inset: -4vh -10vw auto -10vw;
+      height: 54vh;
+      background:
+        radial-gradient(ellipse at 50% 8%, rgba(255,255,255,.62), transparent 24%),
+        linear-gradient(110deg, transparent 0 24%, rgba(255,255,255,.18) 42%, transparent 62%);
+      filter: blur(22px);
+    }
+
+    .noise {
+      opacity: .08;
+      mix-blend-mode: soft-light;
+    }
+
+    .glass,
+    .input-card,
+    .step-panel,
+    .mini-card,
+    .vs-card,
+    .role-card,
+    .reply-card,
+    .generated-line,
+    .sample-judgement {
+      border: 1px solid rgba(255,255,255,.58);
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.72), rgba(255,255,255,.42)),
+        radial-gradient(circle at 12% 0%, rgba(255,255,255,.52), transparent 30%);
+      backdrop-filter: blur(26px) saturate(1.08);
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.72),
+        0 26px 72px rgba(70, 103, 72, .18);
+    }
+
+    .landing-inner {
+      width: min(900px, 100%);
+      border-radius: 42px;
+      padding: clamp(40px, 6vw, 72px) clamp(24px, 6vw, 78px);
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.60), rgba(255,255,255,.28)),
+        radial-gradient(circle at 50% 0%, rgba(255,255,255,.58), transparent 42%);
+      border: 1px solid rgba(255,255,255,.56);
+      backdrop-filter: blur(28px) saturate(1.08);
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.76),
+        0 34px 90px rgba(63, 93, 72, .20);
+    }
+
+    .brand-logo .label,
+    .label {
+      color: #5d8e61;
+      text-shadow: none;
+    }
+
+    .brand-logo h1 {
+      color: #1f2428;
+      font-size: clamp(38px, 5vw, 68px);
+      text-shadow: none;
+    }
+
+    .brand-logo span {
+      color: rgba(31,36,40,.52);
+    }
+
+    .slogan {
+      color: #22282c;
+      font-size: clamp(22px, 2.8vw, 38px);
+      text-shadow: none;
+    }
+
+    .slogan strong {
+      color: #4e8757;
+      text-shadow: 0 0 22px rgba(120,173,101,.18);
+    }
+
+    .landing .btn-primary {
+      color: #fff;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.26), transparent 42%),
+        linear-gradient(105deg, #5e7bff 0%, #8f83ff 48%, #f2a38e 100%);
+      border: 1px solid rgba(45,57,85,.38);
+      box-shadow:
+        inset 0 1px 1px rgba(255,255,255,.50),
+        inset 0 -16px 30px rgba(0,0,0,.12),
+        0 18px 46px rgba(75, 100, 170, .25);
+    }
+
+    .landing .btn-primary:hover {
+      box-shadow:
+        inset 0 1px 1px rgba(255,255,255,.58),
+        inset 0 -16px 30px rgba(0,0,0,.10),
+        0 22px 54px rgba(75, 100, 170, .28),
+        0 0 34px rgba(242,163,142,.28);
+    }
+
+    .input-card {
+      max-width: 980px;
+      border-radius: 36px;
+    }
+
+    .input-head h2,
+    .step-head h2 {
+      color: #1f2428;
+    }
+
+    .input-head p,
+    .step-head p,
+    .chip-title {
+      color: #667078;
+    }
+
+    textarea,
+    .quote,
+    .bubble {
+      color: #273036;
+      background: rgba(255,255,255,.44);
+      border: 1px solid rgba(255,255,255,.60);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.64), inset 0 20px 60px rgba(170,190,170,.08);
+      backdrop-filter: blur(18px);
+    }
+
+    .input-view .btn-primary,
+    .decode-view .btn-primary,
+    .btn-ghost,
+    .chip,
+    .download-sample {
+      color: #263038;
+      background: linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.48));
+      border: 1px solid rgba(255,255,255,.62);
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.70),
+        0 12px 30px rgba(80, 115, 80, .16);
+      backdrop-filter: blur(18px);
+    }
+
+    .input-view .btn-primary:hover,
+    .decode-view .btn-primary:hover,
+    .btn-ghost:hover,
+    .chip:hover,
+    .chip.active,
+    .download-sample:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(238,250,244,.62));
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.82),
+        0 16px 38px rgba(80, 115, 80, .18),
+        0 0 24px rgba(139,196,222,.20);
+    }
+
+    .decode-view {
+      gap: 12px;
+    }
+
+    .topbar {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 22px 26px 18px;
+      border-radius: 34px;
+      background: rgba(255,255,255,.34);
+      border: 1px solid rgba(255,255,255,.52);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.66), 0 18px 46px rgba(70,103,72,.14);
+      backdrop-filter: blur(24px);
+      position: sticky;
+      overflow: visible;
+    }
+
+    .topbar::before {
+      content: "";
+      position: absolute;
+      left: 7%;
+      right: 7%;
+      top: 46px;
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.58);
+      box-shadow: inset 0 1px 1px rgba(255,255,255,.75);
+      z-index: 0;
+    }
+
+    .topbar::after {
+      content: "";
+      position: absolute;
+      left: 7%;
+      top: 46px;
+      width: var(--progress, 0%);
+      max-width: 86%;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(124,188,128,.72), rgba(115,185,232,.78));
+      box-shadow: 0 0 18px rgba(115,185,232,.24);
+      z-index: 0;
+      transition: width .42s ease;
+    }
+
+    .nav-step {
+      min-height: 76px;
+      display: grid;
+      justify-items: center;
+      align-content: start;
+      gap: 8px;
+      padding: 0;
+      color: rgba(31,36,40,.48);
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      opacity: .74;
+      position: relative;
+      z-index: 1;
+    }
+
+    .nav-step.done,
+    .nav-step.active {
+      opacity: 1;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .nav-step.done::after {
+      content: "";
+    }
+
+    .nav-num {
+      width: 38px;
+      height: 38px;
+      color: #45604c;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(255,255,255,.72);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.82), 0 8px 20px rgba(70,103,72,.16);
+      font-weight: 800;
+    }
+
+    .nav-step.done .nav-num {
+      background: rgba(225,246,229,.82);
+      color: #4b8d57;
+    }
+
+    .nav-step.active .nav-num {
+      width: 48px;
+      height: 48px;
+      color: #245b75;
+      background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(207,236,255,.82));
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.92),
+        0 0 0 7px rgba(255,255,255,.28),
+        0 0 30px rgba(99,169,219,.34);
+    }
+
+    .nav-label {
+      color: currentColor;
+      font-family: var(--body-font);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .nav-step.active .nav-label {
+      color: #1f2428;
+      font-size: 13px;
+    }
+
+    .nav-step.active::before {
+      content: "";
+      position: absolute;
+      top: 48px;
+      left: 50%;
+      width: 1px;
+      height: 42px;
+      transform: translateX(-50%);
+      background: linear-gradient(180deg, rgba(95,169,214,.65), rgba(95,169,214,0));
+    }
+
+    .nav-step.active::after {
+      content: "";
+      position: absolute;
+      top: 86px;
+      left: 50%;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      background: #79bce8;
+      box-shadow: 0 0 18px rgba(95,169,214,.5);
+    }
+
+    .step-stage {
+      padding-top: 0;
+      min-height: 590px;
+    }
+
+    .step-panel {
+      border-radius: 36px;
+      overflow: visible;
+    }
+
+    .step-panel.active::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -13px;
+      width: 92px;
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, rgba(95,169,214,.72), transparent);
+      transform: translateX(-50%);
+    }
+
+    .mini-card,
+    .vs-card,
+    .role-card,
+    .reply-card,
+    .question-card,
+    .sample-card {
+      border-radius: 28px;
+      background: rgba(255,255,255,.58);
+      border: 1px solid rgba(255,255,255,.60);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.70), 0 18px 48px rgba(70,103,72,.14);
+      color: #1f2428;
+      backdrop-filter: blur(22px);
+    }
+
+    .mini-card h3,
+    .role-card h3,
+    .reply-card h3,
+    .sample-card h3,
+    .metric span,
+    .vs-card strong {
+      color: #1f2428;
+    }
+
+    ul,
+    .role-card p,
+    .sample-card p,
+    .metric strong {
+      color: #667078;
+    }
+
+    li::before {
+      background: #7fb878;
+    }
+
+    .question-card:hover,
+    .question-card.active,
+    .sample-card:hover,
+    .sample-card.active {
+      transform: translateY(-5px);
+      border-color: rgba(255,255,255,.78);
+      background: rgba(255,255,255,.72);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.82), 0 24px 58px rgba(70,103,72,.18);
+    }
+
+    .sample-card {
+      padding-bottom: 68px;
+    }
+
+    .sample-card::before {
+      color: rgba(31,36,40,.06);
+    }
+
+    .sample-card b {
+      color: #245b75;
+      background: rgba(207,236,255,.72);
+      border: 1px solid rgba(255,255,255,.72);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.80), 0 8px 20px rgba(70,103,72,.12);
+    }
+
+    .sample-card .line {
+      color: #1f2428;
+    }
+
+    .sample-card .risk {
+      color: #bd6d5f;
+    }
+
+    .generated-line,
+    .sample-judgement {
+      color: #2f3a40;
+      background: rgba(255,255,255,.54);
+      border-color: rgba(255,255,255,.62);
+    }
+
+    .final-panel {
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.76), rgba(255,255,255,.46)),
+        radial-gradient(circle at 80% 4%, rgba(207,236,255,.62), transparent 36%),
+        radial-gradient(circle at 16% 100%, rgba(216,238,184,.52), transparent 40%);
+    }
+
+    .checklist li::before {
+      content: "✓";
+      top: 0;
+      width: auto;
+      height: auto;
+      color: #4b8d57;
+      background: transparent;
+      font-weight: 900;
+    }
+
+    .status-pill {
+      color: #477b51;
+      background: rgba(225,246,229,.72);
+      border-color: rgba(255,255,255,.62);
+    }
+
+    .landing .btn-primary {
+      color: #ffffff;
+      background:
+        radial-gradient(circle at 24% 50%, rgba(100,112,255,.42), transparent 34%),
+        radial-gradient(circle at 78% 50%, rgba(242,163,142,.26), transparent 34%),
+        rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.42);
+      backdrop-filter: blur(22px) saturate(1.12);
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.48),
+        inset 0 -18px 36px rgba(35,45,110,.26),
+        0 18px 42px rgba(50,60,120,.25),
+        0 0 28px rgba(103,118,255,.18);
+    }
+
+    .landing .btn-primary:hover {
+      transform: translateY(-3px);
+      background:
+        radial-gradient(circle at 24% 50%, rgba(100,112,255,.52), transparent 34%),
+        radial-gradient(circle at 78% 50%, rgba(242,163,142,.34), transparent 34%),
+        rgba(255,255,255,.24);
+      box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.58),
+        inset 0 -18px 36px rgba(35,45,110,.22),
+        0 22px 52px rgba(50,60,120,.28),
+        0 0 36px rgba(103,118,255,.24);
+    }
+
+    .landing .btn-primary:active {
+      transform: translateY(1px) scale(.99);
+      box-shadow:
+        inset 0 3px 12px rgba(35,45,110,.24),
+        0 12px 28px rgba(50,60,120,.20);
+    }
+
+    /* Lake mountain final visual pass */
+    body {
+      color: #1f2428;
+      background-image:
+        linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.24)),
+        url("./assets/lake-mountain-bg.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+
+    .scene::before {
+      inset: 0;
+      height: auto;
+      transform: none;
+      background:
+        radial-gradient(circle at 50% 8%, rgba(255,255,255,.38), transparent 28%),
+        linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.22));
+      filter: blur(1px);
+    }
+
+    .scene::after {
+      display: none;
+    }
+
+    .workflow-view {
+      place-items: center;
+    }
+
+    .workflow-shell {
+      width: min(1120px, 100%);
+      display: grid;
+      gap: 22px;
+    }
+
+    .workflow-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 8px;
+    }
+
+    .workflow-head h2 {
+      margin: 8px 0 0;
+      color: #1f2428;
+      font-family: var(--title-font);
+      font-size: clamp(34px, 4vw, 56px);
+      font-weight: 620;
+      letter-spacing: .03em;
+    }
+
+    .workflow-head p {
+      margin: 8px 0 0;
+      color: #5d6870;
+      line-height: 1.5;
+    }
+
+    .workflow-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .workflow-card {
+      min-height: 172px;
+      text-align: left;
+      border-radius: 34px;
+      padding: 22px;
+      border: 1px solid rgba(255,255,255,.62);
+      background: linear-gradient(145deg, rgba(255,255,255,.72), rgba(255,255,255,.42));
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.74), 0 24px 62px rgba(43,72,73,.18);
+      backdrop-filter: blur(24px) saturate(1.08);
+      color: #1f2428;
+      transition: transform .22s ease, box-shadow .22s ease, background .22s ease;
+    }
+
+    .workflow-card:hover {
+      transform: translateY(-6px);
+      background: linear-gradient(145deg, rgba(255,255,255,.84), rgba(255,255,255,.52));
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.82), 0 30px 76px rgba(43,72,73,.22);
+    }
+
+    .workflow-card .index {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #245b75;
+      background: rgba(207,236,255,.76);
+      border: 1px solid rgba(255,255,255,.76);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.86), 0 10px 24px rgba(43,72,73,.12);
+      font-weight: 850;
+      margin-bottom: 18px;
+    }
+
+    .workflow-card h3 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      font-weight: 720;
+    }
+
+    .workflow-card p {
+      margin: 0;
+      color: #667078;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .workflow-card.final-entry {
+      grid-column: 1 / -1;
+      min-height: 136px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 18px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.78), rgba(226,246,255,.52)),
+        radial-gradient(circle at 90% 0%, rgba(255,122,89,.16), transparent 32%);
+    }
+
+    .workflow-card.final-entry .index {
+      margin: 0;
+      background: rgba(255,221,211,.82);
+      color: #b64e3b;
+    }
+
+    .workflow-card.final-entry::after {
+      content: "Export";
+      justify-self: end;
+      padding: 10px 16px;
+      border-radius: 999px;
+      color: #245b75;
+      background: rgba(255,255,255,.62);
+      border: 1px solid rgba(255,255,255,.70);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.82), 0 10px 24px rgba(43,72,73,.12);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .option-card {
+      padding: 16px;
+      border-radius: 28px;
+      background: rgba(255,255,255,.44);
+      border: 1px solid rgba(255,255,255,.58);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.70), 0 18px 42px rgba(43,72,73,.12);
+      backdrop-filter: blur(18px);
+    }
+
+    .option-card .chip-title {
+      color: #29333a;
+      font-size: 16px;
+      font-weight: 760;
+      margin-bottom: 4px;
+    }
+
+    .option-card .chips {
+      display: grid;
+      gap: 9px;
+    }
+
+    .option-card.two-col .chips {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .option-card.three-col .chips {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .option-card .chip {
+      justify-content: center;
+      width: 100%;
+    }
+
+    .custom-scene {
+      display: none;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .custom-scene.show {
+      display: grid;
+    }
+
+    .custom-scene input {
+      min-height: 40px;
+      border: 1px solid rgba(255,255,255,.62);
+      border-radius: 999px;
+      padding: 0 14px;
+      color: #1f2428;
+      background: rgba(255,255,255,.58);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.72);
+      outline: none;
+    }
+
+    .custom-scene button {
+      min-height: 40px;
+    }
+
+    .nav-step.active .nav-label {
+      color: #FF7A59;
+      text-shadow: 0 0 14px rgba(255,122,89,.25);
+      font-weight: 850;
+    }
+
+    .nav-step.active .nav-num {
+      color: #fff;
+      background: #FF7A59;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.55), 0 0 0 7px rgba(255,122,89,.13), 0 0 28px rgba(255,122,89,.36);
+    }
+
+    .nav-step.active::before {
+      background: linear-gradient(180deg, rgba(255,122,89,.78), rgba(255,122,89,0));
+    }
+
+    .nav-step.active::after {
+      background: #FF7A59;
+      box-shadow: 0 0 18px rgba(255,122,89,.56);
+    }
+
+    .topbar::after {
+      background: linear-gradient(90deg, rgba(112,181,219,.78), rgba(255,122,89,.78));
+    }
+
+    .final-panel {
+      border: 1px solid rgba(255,255,255,.72);
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.84), rgba(255,255,255,.55)),
+        radial-gradient(circle at 88% 0%, rgba(255,122,89,.15), transparent 34%),
+        radial-gradient(circle at 8% 100%, rgba(157,211,255,.32), transparent 42%);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.82), 0 34px 86px rgba(43,72,73,.22);
+    }
+
+    @media (max-width: 960px) {
+      .workflow-grid,
+      .workflow-card.final-entry,
+      .option-card.two-col .chips,
+      .option-card.three-col .chips,
+      .custom-scene {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feedback-wrap {
+      position: relative;
+    }
+
+    .history-btn {
+      position: absolute;
+      right: 14px;
+      bottom: 14px;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      color: #263038;
+      background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.56));
+      border: 1px solid rgba(255,255,255,.68);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.78), 0 10px 24px rgba(43,72,73,.14);
+      backdrop-filter: blur(18px);
+      font-size: 13px;
+      font-weight: 750;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      z-index: 2;
+    }
+
+    .history-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.86), 0 14px 30px rgba(43,72,73,.18), 0 0 20px rgba(115,185,232,.18);
+    }
+
+    .selected-ref {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      color: #245b75;
+      background: rgba(207,236,255,.54);
+      border: 1px solid rgba(255,255,255,.66);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.72), 0 10px 26px rgba(43,72,73,.10);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .selected-ref.show {
+      display: block;
+    }
+
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(31,36,40,.18);
+      backdrop-filter: blur(2px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .24s ease;
+      z-index: 80;
+    }
+
+    .drawer-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .history-drawer {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      bottom: 20px;
+      width: min(500px, calc(100vw - 40px));
+      border-radius: 34px;
+      padding: 22px;
+      border: 1px solid rgba(255,255,255,.66);
+      background: linear-gradient(145deg, rgba(255,255,255,.74), rgba(255,255,255,.45));
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.82), 0 34px 90px rgba(43,72,73,.22);
+      backdrop-filter: blur(28px) saturate(1.08);
+      transform: translateX(calc(100% + 36px));
+      transition: transform .32s ease;
+      z-index: 90;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 16px;
+    }
+
+    .history-drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .drawer-head h2 {
+      margin: 7px 0 0;
+      color: #1f2428;
+      font-family: var(--title-font);
+      font-size: 30px;
+      font-weight: 650;
+    }
+
+    .drawer-head p {
+      margin: 7px 0 0;
+      color: #667078;
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .upload-zone {
+      display: grid;
+      place-items: center;
+      gap: 8px;
+      min-height: 150px;
+      text-align: center;
+      border-radius: 28px;
+      border: 1px dashed rgba(36,91,117,.30);
+      background: rgba(255,255,255,.44);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.76), 0 14px 36px rgba(43,72,73,.10);
+      cursor: pointer;
+    }
+
+    .upload-zone strong {
+      color: #1f2428;
+      font-size: 18px;
+    }
+
+    .upload-zone span {
+      color: #667078;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .upload-zone small {
+      color: #7b878e;
+    }
+
+    .upload-zone input {
+      display: none;
+    }
+
+    .file-list {
+      overflow: auto;
+      display: grid;
+      align-content: start;
+      gap: 10px;
+      padding-right: 4px;
+    }
+
+    .empty-files {
+      color: #667078;
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255,255,255,.36);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .file-card {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.62);
+      background: rgba(255,255,255,.52);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.78), 0 12px 30px rgba(43,72,73,.10);
+    }
+
+    .file-card.active {
+      background: rgba(207,236,255,.66);
+      border-color: rgba(115,185,232,.45);
+    }
+
+    .file-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: #245b75;
+      background: rgba(255,255,255,.62);
+      font-weight: 850;
+      font-size: 12px;
+    }
+
+    .file-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .file-meta {
+      min-width: 0;
+    }
+
+    .file-name {
+      color: #1f2428;
+      font-weight: 760;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 5px;
+    }
+
+    .file-info {
+      color: #667078;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .file-actions button,
+    .drawer-actions button {
+      min-height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      color: #263038;
+      background: rgba(255,255,255,.62);
+      border: 1px solid rgba(255,255,255,.68);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.78), 0 8px 18px rgba(43,72,73,.10);
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .drawer-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .ref-note {
+      margin-top: 12px;
+      color: #245b75;
+      background: rgba(207,236,255,.50);
+      border-color: rgba(115,185,232,.35);
+    }
+
+    /* Fine tune: lighter landing typography, green flow navigation, clearer input controls. */
+    .brand-logo h1 {
+      font-size: clamp(30px, 4.3vw, 54px);
+      line-height: 1.08;
+      letter-spacing: .13em;
+      font-weight: 560;
+    }
+
+    .brand-logo .label {
+      font-size: 10px;
+      letter-spacing: .24em;
+    }
+
+    .brand-logo span {
+      font-size: 13px;
+      letter-spacing: .34em;
+    }
+
+    .slogan {
+      max-width: 720px;
+      font-size: clamp(19px, 2.35vw, 30px);
+      line-height: 1.48;
+      letter-spacing: .05em;
+      font-weight: 520;
+    }
+
+    .slogan strong {
+      color: #3f8056;
+      text-shadow: 0 0 18px rgba(79,143,99,.16);
+    }
+
+    .nav-step {
+      color: #4F8F63;
+      opacity: .94;
+    }
+
+    .nav-step .nav-label {
+      color: #4F8F63;
+      font-weight: 760;
+    }
+
+    .nav-step .nav-num {
+      color: #4F8F63;
+      background: rgba(236,248,239,.82);
+    }
+
+    .nav-step.done .nav-label,
+    .nav-step.done .nav-num {
+      color: #3F8056;
+    }
+
+    .nav-step.active .nav-label {
+      color: #2F6F46;
+      font-weight: 900;
+      text-shadow: 0 0 14px rgba(47,111,70,.24);
+    }
+
+    .nav-step.active .nav-num {
+      color: #fff;
+      background: #2F6F46;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.5), 0 0 0 7px rgba(79,143,99,.14), 0 0 28px rgba(47,111,70,.32);
+    }
+
+    .nav-step.active::before {
+      background: linear-gradient(180deg, rgba(47,111,70,.9), rgba(47,111,70,0));
+    }
+
+    .nav-step.active::after {
+      background: #2F6F46;
+      box-shadow: 0 0 18px rgba(47,111,70,.48);
+    }
+
+    .topbar::before {
+      background: rgba(79,143,99,.24);
+    }
+
+    .topbar::after {
+      background: linear-gradient(90deg, rgba(79,143,99,.45), rgba(47,111,70,.9));
+    }
+
+    .option-card {
+      position: relative;
+      z-index: 3;
+    }
+
+    .option-card .chip-title {
+      color: #223029;
+      font-size: 18px;
+      font-weight: 850;
+      letter-spacing: .02em;
+      margin-bottom: 10px;
+    }
+
+    .option-card .chip {
+      pointer-events: auto;
+      position: relative;
+      z-index: 4;
+      min-height: 42px;
+      color: #2b3930;
+      font-weight: 760;
+      border-color: rgba(255,255,255,.72);
+    }
+
+    .option-card .chip.active {
+      color: #214d32;
+      background: linear-gradient(180deg, rgba(236,248,239,.96), rgba(206,236,213,.74));
+      border-color: rgba(79,143,99,.32);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.82), 0 14px 32px rgba(79,143,99,.18), 0 0 0 3px rgba(79,143,99,.08);
+    }
+
+    .metric {
+      min-height: 118px;
+      gap: 10px;
+      padding: 20px;
+    }
+
+    .metric strong {
+      font-size: 11px;
+      font-weight: 720;
+      letter-spacing: .12em;
+    }
+
+    .metric span {
+      font-size: 18px;
+      line-height: 1.36;
+      font-weight: 560;
+    }
+
+    /* Final polish: lighter strategy-workbench tone and richer delivery cards. */
+    .step-head h2 {
+      font-weight: 560;
+      letter-spacing: .015em;
+      line-height: 1.18;
+    }
+
+    .step-head p,
+    .mini-card p,
+    .role-card p,
+    .sample-card p,
+    .question-card,
+    .vs-card strong {
+      font-weight: 430;
+      line-height: 1.72;
+    }
+
+    .mini-card h3,
+    .role-card h3,
+    .reply-card h3,
+    .sample-card h3 {
+      font-weight: 620;
+      letter-spacing: .01em;
+    }
+
+    .nav-step .nav-num { font-weight: 650; }
+    .nav-step .nav-label { font-weight: 620; letter-spacing: .02em; }
+
+    #keyInsightLine::before {
+      content: "✦";
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      margin-right: 10px;
+      border-radius: 999px;
+      color: #4f8f63;
+      background: rgba(255,255,255,.58);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.86), 0 8px 22px rgba(79,143,99,.16);
+    }
+
+    .step-head h2::before {
+      display: inline-grid;
+      place-items: center;
+      margin-right: 8px;
+      font-family: "Segoe UI Symbol", "Apple Color Emoji", sans-serif;
+      font-size: .78em;
+      opacity: .68;
+      vertical-align: .06em;
+    }
+
+    .step-panel[data-panel="1"] .step-head h2::before { content: "⌁"; }
+    .step-panel[data-panel="2"] .step-head h2::before { content: "◐"; }
+    .step-panel[data-panel="3"] .step-head h2::before { content: "⚖"; }
+    .step-panel[data-panel="4"] .step-head h2::before { content: "◇"; }
+    .step-panel[data-panel="5"] .step-head h2::before { content: "?"; }
+    .step-panel[data-panel="6"] .step-head h2::before { content: "□"; }
+    .step-panel[data-panel="7"] .step-head h2::before { content: "↗"; }
+
+    .demand-grid { align-items: stretch; gap: 22px; }
+
+    .demand-card {
+      position: relative;
+      padding: 28px;
+      overflow: hidden;
+    }
+
+    .demand-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 22% 8%, rgba(255,255,255,.48), transparent 28%);
+      opacity: .8;
+    }
+
+    .demand-card.visible {
+      border-color: rgba(255,255,255,.82);
+      background: linear-gradient(180deg, rgba(255,255,255,.74), rgba(231,248,238,.54));
+    }
+
+    .demand-card.hidden {
+      border-color: rgba(197,216,232,.76);
+      background: linear-gradient(180deg, rgba(244,248,255,.68), rgba(220,232,242,.48));
+    }
+
+    .demand-title {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      text-align: center;
+      color: #1f3427;
+    }
+
+    .demand-title h3 {
+      margin: 0;
+      font-size: clamp(22px, 2.4vw, 32px);
+      font-weight: 650;
+      letter-spacing: .04em;
+    }
+
+    .demand-title .icon {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.62);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.82), 0 10px 28px rgba(79,143,99,.14);
+      color: #4f8f63;
+      font-size: 21px;
+    }
+
+    .demand-card.hidden .demand-title { color: #2f4d68; }
+
+    .demand-card.hidden .icon {
+      color: #456c87;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.82), 0 10px 28px rgba(69,108,135,.14);
+    }
+
+    .micro-copy {
+      margin: 0 0 18px;
+      text-align: center;
+      color: #64727a;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .demand-card ul {
+      position: relative;
+      display: grid;
+      gap: 12px;
+      padding-left: 0;
+      list-style: none;
+    }
+
+    .demand-card li {
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.42);
+      color: #28343a;
+    }
+
+    .demand-card li::before {
+      content: "•";
+      margin-right: 8px;
+      color: #4f8f63;
+    }
+
+    .checklist-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .check-card {
+      min-height: 126px;
+      padding: 16px;
+      border-radius: 22px;
+      background: rgba(255,255,255,.46);
+      border: 1px solid rgba(255,255,255,.6);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.72), 0 10px 28px rgba(52,78,94,.08);
+    }
+
+    .check-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .check-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #1f2428;
+      font-weight: 640;
+    }
+
+    .check-icon {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.62);
+      color: #4f8f63;
+      font-size: 14px;
+    }
+
+    .check-tag,
+    .recommend-pill {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      border-radius: 999px;
+      padding: 5px 10px;
+      color: #37533f;
+      background: rgba(230,241,217,.78);
+      border: 1px solid rgba(255,255,255,.68);
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+
+    .check-tag.pending {
+      color: #7b5b32;
+      background: rgba(247,230,189,.7);
+    }
+
+    .check-tag.add {
+      color: #42647c;
+      background: rgba(218,235,248,.72);
+    }
+
+    .check-card p {
+      margin: 0;
+      color: #667078;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .sample-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .sample-preview {
+      display: grid;
+      place-items: center;
+      min-height: 112px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.68);
+      background:
+        radial-gradient(circle at 28% 24%, rgba(255,255,255,.88), transparent 34%),
+        linear-gradient(135deg, rgba(213,233,246,.72), rgba(231,241,218,.62));
+      color: rgba(31,36,40,.54);
+      font-size: 12px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .sample-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .sample-card .highlight {
+      margin-top: 0;
+      color: #365844;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .sample-card .line { margin-top: 0; }
+    .download-sample::before { content: "↓"; margin-right: 6px; }
+
+    .role-card b {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      margin-bottom: 12px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      color: #315c43;
+      background: rgba(255,255,255,.54);
+      border: 1px solid rgba(255,255,255,.7);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.82), 0 10px 26px rgba(79,143,99,.12);
+      font-size: clamp(20px, 2vw, 30px);
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .role-card b::before {
+      content: attr(data-icon);
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      color: #4f8f63;
+      background: rgba(232,244,236,.74);
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    .role-card h3 {
+      margin-top: 4px;
+    }
+
+    .risk-list.consulting .risk-item {
+      border-left-color: rgba(79,143,99,.48);
+      background: rgba(255,255,255,.38);
+    }
+
+    .risk-list.consulting .risk-item::before {
+      content: "•";
+      color: #4f8f63;
+      margin-right: 8px;
+    }
+
+    .metric-grid-compact {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .metric.insight-metric span {
+      font-size: clamp(16px, 1.8vw, 24px);
+      line-height: 1.45;
+    }
+
+    .tension-card {
+      display: grid;
+      gap: 14px;
+      padding: 20px;
+    }
+
+    .tension-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      color: #1f2428;
+      font-weight: 620;
+    }
+
+    .tension-row span:last-child {
+      text-align: right;
+    }
+
+    .tension-row b {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      color: #365844;
+      background: rgba(255,255,255,.58);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.84), 0 8px 22px rgba(79,143,99,.12);
+      font-size: 12px;
+      letter-spacing: .08em;
+    }
+
+    .tension-bar {
+      position: relative;
+      height: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255,255,255,.42);
+      box-shadow: inset 0 1px 3px rgba(52,78,94,.12);
+    }
+
+    .tension-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(79,143,99,.8), rgba(226,207,142,.78), rgba(91,129,153,.72));
+    }
+
+    .tension-percent {
+      display: flex;
+      justify-content: space-between;
+      color: #64727a;
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    .tension-note {
+      margin: 2px 0 0;
+      color: #365844;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    @media (max-width: 960px) {
+      .checklist-grid { grid-template-columns: 1fr; }
+      .metric-grid-compact { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="scene">
+    <div class="noise" aria-hidden="true"></div>
+
+    <section class="view landing active" id="landing">
+      <div class="landing-inner">
+        <div class="brand-logo">
+          <div class="label">Client Feedback Decoder</div>
+          <h1>言外之意</h1>
+          <span>Subtext</span>
+        </div>
+        <p class="slogan">听懂客户没说出口的部分，<br>把模糊反馈变成下一步行动。</p>
+        <button class="btn-primary" id="startBtn">Start Now</button>
+      </div>
+    </section>
+
+    <section class="view workflow-view" id="workflowHome">
+      <div class="workflow-shell">
+        <div class="workflow-head">
+          <div>
+            <div class="label">Workflow Home</div>
+            <h2>解码工作台</h2>
+            <p>选择一个步骤直接进入，也可以先放入一段新的甲方爸爸的话。</p>
+          </div>
+          <button class="btn-primary" data-go="inputView">甲方爸爸的话</button>
+        </div>
+        <div class="workflow-grid">
+          <button class="workflow-card" data-home-step="1">
+            <span class="index">1</span>
+            <h3>甲方原声带</h3>
+            <p>先把原话完整接住</p>
+          </button>
+          <button class="workflow-card" data-home-step="2">
+            <span class="index">2</span>
+            <h3>他说出口的 & 他真正担心的</h3>
+            <p>把明话和潜台词分开</p>
+          </button>
+          <button class="workflow-card" data-home-step="3">
+            <span class="index">3</span>
+            <h3>甲方纠结点</h3>
+            <p>看见客户左右为难的地方</p>
+          </button>
+          <button class="workflow-card" data-home-step="4">
+            <span class="index">4</span>
+            <h3>提前替客户想一遍</h3>
+            <p>不是挑刺，是先补逻辑</p>
+          </button>
+          <button class="workflow-card" data-home-step="5">
+            <span class="index">5</span>
+            <h3>还得问甲方爸爸</h3>
+            <p>有些点不能猜，要问准</p>
+          </button>
+          <button class="workflow-card" data-home-step="6">
+            <span class="index">6</span>
+            <h3>先给甲方看这几个方向</h3>
+            <p>先定方向，再开工</p>
+          </button>
+          <button class="workflow-card final-entry" data-home-step="7">
+            <span class="index">7</span>
+            <div>
+              <h3>接下来谁动手</h3>
+              <p>把方向拆成团队动作</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="view input-view" id="inputView">
+      <article class="input-card glass">
+        <div class="input-head">
+          <div>
+            <div class="label">Raw Signal</div>
+            <h2>甲方爸爸的话</h2>
+            <p>把客户微信、邮件、会议纪要或方案批注放进来，不用整理，越原始越真实。</p>
+          </div>
+          <button class="btn-ghost" data-go="landing">Back</button>
+        </div>
+
+        <div class="feedback-wrap">
+          <textarea id="feedback">整体视觉是好看的，夏天的感觉也有了，但是我们看下来觉得‘想喝’的感觉还不够强。现在更像一张氛围图，产品本身的卖点没有被打出来。第二杯半价这个活动信息也有点弱。另外，希望年轻一点，但不要太网红、太花哨。</textarea>
+          <button class="history-btn" id="historyBtn" type="button">⌁ 历史记录</button>
+        </div>
+        <div class="selected-ref" id="selectedRef"></div>
+
+        <div class="chip-groups">
+          <div class="chip-group option-card two-col" data-group="scene">
+            <div class="chip-title">项目场景</div>
+            <div class="chips">
+              <button class="chip active">新品上市</button>
+              <button class="chip">活动促销</button>
+              <button class="chip">社媒种草</button>
+              <button class="chip">短视频脚本</button>
+              <button class="chip custom-trigger">自定义</button>
+            </div>
+            <div class="custom-scene" id="customScene">
+              <input id="customSceneInput" placeholder="输入项目场景" />
+              <button class="btn-ghost" id="confirmScene" type="button">确认</button>
+            </div>
+          </div>
+          <div class="chip-group option-card three-col" data-group="stage">
+            <div class="chip-title">当前阶段</div>
+            <div class="chips">
+              <button class="chip active">初稿反馈</button>
+              <button class="chip">二轮修改</button>
+              <button class="chip">执行前确认</button>
+            </div>
+          </div>
+          <div class="chip-group option-card two-col" data-group="goal">
+            <div class="chip-title">输出目标</div>
+            <div class="chips">
+              <button class="chip active">整理需求</button>
+              <button class="chip">行动建议</button>
+              <button class="chip">方向小样</button>
+              <button class="chip">客户回复</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-actions">
+          <span class="label">Agent Input Console</span>
+          <button class="btn-primary" id="decodeBtn">开始解码 Decode Feedback</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="view decode-view" id="decodeView">
+      <nav class="topbar glass" aria-label="解码步骤">
+        <button class="nav-step active" data-step="1" data-short="原声" data-full="甲方原声带"><span class="nav-num">1</span><span class="nav-label">甲方原声带</span></button>
+        <button class="nav-step" data-step="2" data-short="明话" data-full="他说出口的 & 他真正担心的"><span class="nav-num">2</span><span class="nav-label">明话</span></button>
+        <button class="nav-step" data-step="3" data-short="纠结" data-full="甲方纠结点"><span class="nav-num">3</span><span class="nav-label">纠结</span></button>
+        <button class="nav-step" data-step="4" data-short="多想" data-full="提前替客户想一遍"><span class="nav-num">4</span><span class="nav-label">多想</span></button>
+        <button class="nav-step" data-step="5" data-short="追问" data-full="还得问甲方爸爸"><span class="nav-num">5</span><span class="nav-label">追问</span></button>
+        <button class="nav-step" data-step="6" data-short="方向" data-full="先给甲方看这几个方向"><span class="nav-num">6</span><span class="nav-label">方向</span></button>
+        <button class="nav-step" data-step="7" data-short="开工" data-full="接下来谁动手"><span class="nav-num">7</span><span class="nav-label">开工</span></button>
+      </nav>
+
+      <section class="step-stage">
+        <article class="step-panel glass active" data-panel="1">
+          <div class="step-head">
+            <div>
+              <div class="label">Step 1 / 甲方原声带</div>
+              <h2>甲方原声带</h2>
+              <p>先把客户原话完整接住，再听它背后的意思。</p>
+            </div>
+            <span class="status-pill">Completed</span>
+          </div>
+          <div class="quote" id="rawQuote">整体视觉是好看的，夏天的感觉也有了，但是我们看下来觉得‘想喝’的感觉还不够强。现在更像一张氛围图，产品本身的卖点没有被打出来。第二杯半价这个活动信息也有点弱。另外，希望年轻一点，但不要太网红、太花哨。</div>
+          <div class="quote ref-note" id="stepRefNote">参考材料：暂未导入历史文件。</div>
+          <div class="generated-line" id="keyInsightLine">客户不是觉得画面不好看，而是担心广告好看但不卖货。</div>
+          <div class="grid-2 metric-grid-compact" style="margin-top: 14px;">
+            <div class="mini-card metric"><strong>情绪强度</strong><span>中高</span></div>
+            <div class="mini-card metric insight-metric"><strong>言外之意</strong><span id="goalMetric">客户不是嫌画面不好看，而是担心广告好看但不卖货。</span></div>
+          </div>
+          <div class="step-actions"><button class="btn-ghost" data-go="inputView">返回输入</button><button class="btn-primary next">下一步</button></div>
+        </article>
+
+        <article class="step-panel glass" data-panel="2">
+          <div class="step-head">
+            <div>
+              <div class="label">Step 2 / 他说出口的 & 他真正担心的</div>
+              <h2>他说出口的 & 他真正担心的</h2>
+              <p>把明话和潜台词分开，别急着直接改稿。</p>
+            </div>
+            <span class="status-pill">Completed</span>
+          </div>
+          <div class="grid-2 demand-grid">
+            <div class="mini-card demand-card visible">
+              <div class="demand-title"><span class="icon">☼</span><h3>他说出口的</h3></div>
+              <p class="micro-copy">客户已经说出口的修改方向，先把它们摆清楚。</p>
+              <ul id="explicitDemandList">
+                <li>产品本身要更有“想喝”的感觉</li>
+                <li>新品卖点要更明确</li>
+                <li>第二杯半价活动信息要更突出</li>
+                <li>视觉和文案要更年轻</li>
+              </ul>
+            </div>
+            <div class="mini-card demand-card hidden">
+              <div class="demand-title"><span class="icon">◑</span><h3>他真正担心的</h3></div>
+              <p class="micro-copy">不用猜，先把潜台词拆开，再决定下一版怎么推进。</p>
+              <ul id="implicitDemandList">
+                <li>客户希望广告不只是好看，还要能促进到店购买</li>
+                <li>客户担心年轻化过度导致品牌质感下降</li>
+                <li>客户需要下一版方案回答“用户为什么现在要买”</li>
+              </ul>
+            </div>
+          </div>
+          <div class="step-actions"><button class="btn-ghost prev">上一步</button><button class="btn-primary next">下一步</button></div>
+        </article>
+
+        <article class="step-panel glass" data-panel="3">
+          <div class="step-head">
+            <div>
+              <div class="label">Step 3 / 甲方纠结点</div>
+              <h2>甲方纠结点</h2>
+              <p>客户嘴上都想要，但心里其实有轻重。</p>
+            </div>
+            <span class="status-pill">Risk</span>
+          </div>
+          <div class="grid-2" id="coreTensionGrid">
+            <div class="vs-card tension-card"><div class="tension-row"><span>年轻化</span><b>VS</b><span>品牌质感</span></div><div class="tension-bar"><div class="tension-fill" style="width:65%"></div></div><div class="tension-percent"><span>65%</span><span>35%</span></div><p class="tension-note">倾向判断：客户想要年轻化，但不想牺牲品牌安全感。</p></div>
+            <div class="vs-card tension-card"><div class="tension-row"><span>氛围感</span><b>VS</b><span>卖货感</span></div><div class="tension-bar"><div class="tension-fill" style="width:40%"></div></div><div class="tension-percent"><span>40%</span><span>60%</span></div><p class="tension-note">倾向判断：客户当前更偏向“卖货感”。</p></div>
+            <div class="vs-card tension-card"><div class="tension-row"><span>活动信息</span><b>VS</b><span>不显廉价</span></div><div class="tension-bar"><div class="tension-fill" style="width:58%"></div></div><div class="tension-percent"><span>58%</span><span>42%</span></div><p class="tension-note">倾向判断：活动要更清楚，但不能像甩卖。</p></div>
+            <div class="vs-card tension-card"><div class="tension-row"><span>品牌露出</span><b>VS</b><span>不硬广</span></div><div class="tension-bar"><div class="tension-fill" style="width:52%"></div></div><div class="tension-percent"><span>52%</span><span>48%</span></div><p class="tension-note">倾向判断：露出要更明确，但表达仍要轻。</p></div>
+          </div>
+          <div class="step-actions"><button class="btn-ghost prev">上一步</button><button class="btn-primary next">下一步</button></div>
+        </article>
+
+        <article class="step-panel glass" data-panel="4">
+          <div class="step-head">
+            <div>
+              <div class="label">Step 4 / 提前替客户想一遍</div>
+              <h2>提前替客户想一遍</h2>
+              <p>不是挑刺，是提前把下一轮可能被问到的点先补上。</p>
+            </div>
+            <span class="status-pill">Review</span>
+          </div>
+          <div class="grid-2">
+            <div class="mini-card">
+              <h3>下一轮可能会被问到</h3>
+              <div class="risk-list consulting">
+                <div class="risk-item">客户可能会继续问：用户为什么现在要买？</div>
+                <div class="risk-item">消费者可能只觉得画面好看，但没记住产品利益点。</div>
+                <div class="risk-item">活动信息如果继续放太弱，容易被客户认为“促销没打出来”。</div>
+                <div class="risk-item">年轻化如果太用力，会被客户觉得不像品牌。</div>
+                <div class="risk-item">下一版提案里建议主动补一句：为什么这样更能带动购买。</div>
+              </div>
+            </div>
+            <div class="mini-card">
+              <h3>Evidence / 为什么要多想一步</h3>
+              <ul>
+                <li>客户先认可视觉好看，说明问题不是单纯审美</li>
+                <li>客户提到“想喝不够强”，说明产品吸引力不足</li>
+                <li>客户提到“第二杯半价弱”，说明利益点露出不足</li>
+                <li>客户同时要求年轻但不要网红，说明方案需要主动交代调性边界</li>
+              </ul>
+            </div>
+          </div>
+          <div class="step-actions"><button class="btn-ghost prev">上一步</button><button class="btn-primary next">下一步</button></div>
+        </article>
+
+        <article class="step-panel glass" data-panel="5">
+          <div class="step-head">
+            <div>
+              <div class="label">Step 5 / 还得问甲方爸爸</div>
+              <h2>还得问甲方爸爸</h2>
+              <p>有些点不能靠脑补，问准了才不返工。</p>
+            </div>
+            <span class="status-pill">Need Confirm</span>
+          </div>
+          <div class="grid-3" id="questionsGrid">
+            <button class="question-card active">这次更想优先强化“产品想喝感”，还是“第二杯半价”的活动利益？</button>
+            <button class="question-card">年轻化的边界在哪里？是文案更轻松，还是视觉更活泼？</button>
+            <button class="question-card">客户说的品牌质感，具体是配色、字体、画面留白，还是整体调性？</button>
+          </div>
+          <div class="generated-line" id="questionLine">老师，我们理解这版主要需要把“想喝感”和购买理由说得更清楚。这里想跟您确认一下，这次更想优先强化“产品想喝感”，还是“第二杯半价”的活动利益？</div>
+          <div class="step-actions"><button class="btn-ghost prev">上一步</button><button class="btn-primary next">下一步</button></div>
+        </article>
+
+        <article class="step-panel glass" data-panel="7">
+          <div class="step-head">
+            <div>
+              <div class="label">Step 7 / 接下来谁动手</div>
+              <h2>接下来谁动手</h2>
+              <p>方向定了之后，各位同事马上知道自己该改什么。</p>
+            </div>
+            <span class="status-pill">Action Ready</span>
+          </div>
+          <div class="grid-3" id="nextActionsGrid" style="margin-bottom: 14px;"></div>
+          <div class="grid-5">
+            <div class="role-card"><b data-icon="✉">AE</b><h3>确认尺度</h3><p>整理客户核心诉求，带着“年轻化边界”和活动露出强度去确认。</p></div>
+            <div class="role-card"><b data-icon="◎">策划</b><h3>重写策略锚点</h3><p>从“夏日氛围”校准为“清爽口感 + 即刻尝鲜理由”。</p></div>
+            <div class="role-card"><b data-icon="◐">设计</b><h3>重排视觉层级</h3><p>放大产品杯、冰块、水珠、白桃切面，提高第二杯半价层级。</p></div>
+            <div class="role-card"><b data-icon="↗">媒介</b><h3>检查转化入口</h3><p>确认平台露出位置、活动入口和信息层级，避免用户看见但不知道去哪买。</p></div>
+            <div class="role-card"><b data-icon="▶">内容 / 视频</b><h3>前 3 秒抓人</h3><p>用产品特写和冰爽瞬间开场，再接活动利益点和场景文案。</p></div>
+          </div>
+          <div class="step-actions"><button class="btn-ghost prev">上一步</button><button class="btn-primary" data-go="landing">完成</button></div>
+        </article>
+
+        <article class="step-panel glass final-panel" data-panel="6">
+          <div class="step-head">
+            <div>
+              <div class="label">Step 6 / 先给甲方看这几个方向</div>
+              <h2>先给甲方看这几个方向</h2>
+              <p>先拿方向小样去确认，不要一上来就全员开工。</p>
+            </div>
+            <div class="right-actions">
+              <span class="status-pill">Ready</span>
+              <button class="btn-ghost op-feedback">导出行动卡 / Export Action Card</button>
+            </div>
+          </div>
+          <div class="delivery">
+            <div class="reply-card">
+              <h3>Client Reply</h3>
+              <div class="reply-row">
+                <div class="bubble" id="replyText">收到，我们理解您这边主要希望下一版不只是保留夏日氛围感，而是进一步强化产品本身的吸引力和到店购买理由。下一版我们会把重点从单纯‘好看清爽’调整为‘清爽口感 + 明确利益点’，同时控制年轻化表达的尺度，避免过度网红化，保持品牌质感。</div>
+                <button class="btn-ghost" id="copyReply">Copy</button>
+              </div>
+            </div>
+            <div class="mini-card">
+              <h3>Revision Checklist</h3>
+              <p class="micro-copy" style="text-align:left;margin-bottom:0;">把模糊反馈变成可检查的下一版动作。</p>
+              <div class="checklist-grid">
+                <div class="check-card">
+                  <div class="check-top"><span class="check-title"><span class="check-icon">✦</span>产品吸引力</span><span class="check-tag">已校准</span></div>
+                  <p>是否让用户第一眼产生想尝试 / 想购买的理由？</p>
+                </div>
+                <div class="check-card">
+                  <div class="check-top"><span class="check-title"><span class="check-icon">◎</span>核心卖点</span><span class="check-tag">已校准</span></div>
+                  <p>产品口感、功能、利益点是否被清楚表达？</p>
+                </div>
+                <div class="check-card">
+                  <div class="check-top"><span class="check-title"><span class="check-icon">↗</span>活动信息</span><span class="check-tag add">建议补充</span></div>
+                  <p>促销、优惠、时间、行动入口是否足够明显？</p>
+                </div>
+                <div class="check-card">
+                  <div class="check-top"><span class="check-title"><span class="check-icon">◐</span>视觉调性</span><span class="check-tag">已校准</span></div>
+                  <p>是否符合客户要求的年轻感、质感和品牌安全感？</p>
+                </div>
+                <div class="check-card">
+                  <div class="check-top"><span class="check-title"><span class="check-icon">→</span>用户行动</span><span class="check-tag add">建议补充</span></div>
+                  <p>用户看完之后是否知道下一步该做什么？</p>
+                </div>
+                <div class="check-card">
+                  <div class="check-top"><span class="check-title"><span class="check-icon">?</span>客户确认点</span><span class="check-tag pending">待确认</span></div>
+                  <p>哪些方向需要先让客户选择或确认，避免继续猜？</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="label" style="margin-bottom: 12px;">Proposal Samples</div>
+              <div class="grid-3" id="proposalSamplesGrid">
+                <button class="sample-card active" data-name="食欲感强化版" data-judge="AI 判断：你选择了【食欲感强化版】，说明本轮更应该优先解决“产品吸引力不足”的问题，再承接活动信息。" data-letter="A">
+                  <div class="sample-preview">视觉小样预览</div><div class="sample-meta"><b>A</b><span class="recommend-pill">主推方向</span></div><h3>食欲感强化版</h3><p>策略：强化产品本身的清爽、白桃香气和冰爽口感。</p><p class="line">白桃香气撞上冰爽美式，一口把夏天降下来。</p><p class="highlight">方向亮点：第一眼就能激发“想喝”的欲望，适合解决产品吸引力不足的问题。</p>
+                  <span class="download-sample">下载小样</span>
+                </button>
+                <button class="sample-card" data-name="活动利益强化版" data-judge="AI 判断：你选择了【活动利益强化版】，说明本轮更应该优先解决“购买理由不清晰”的问题，而不是单纯优化视觉氛围。" data-letter="B">
+                  <div class="sample-preview">视觉小样预览</div><div class="sample-meta"><b>B</b><span class="recommend-pill">优先给客户看</span></div><h3>活动利益强化版</h3><p>策略：把第二杯半价变成尝鲜理由，而不是廉价促销。</p><p class="line">今天的降温计划：白桃冰美式，第二杯半价。</p><p class="highlight">方向亮点：把优惠变成轻松尝鲜的理由，让用户觉得现在买刚刚好。</p>
+                  <span class="download-sample">下载小样</span>
+                </button>
+                <button class="sample-card" data-name="质感年轻化版" data-judge="AI 判断：你选择了【质感年轻化版】，说明客户对品牌调性很敏感，下一轮要先稳住高级感，再补足转化信息。" data-letter="C">
+                  <div class="sample-preview">视觉小样预览</div><div class="sample-meta"><b>C</b><span class="recommend-pill">备选方向</span></div><h3>质感年轻化版</h3><p>策略：用留白、冷感材质和轻文案表达年轻感。</p><p class="line">少一点燥热，多一口白桃冰感。</p><p class="highlight">方向亮点：在年轻感和品牌质感之间留出平衡，让客户放心不会网红化。</p>
+                  <span class="download-sample">下载小样</span>
+                </button>
+              </div>
+              <div class="sample-judgement" id="sampleJudge">AI 判断：你选择了【食欲感强化版】，说明本轮更应该优先解决“产品吸引力不足”的问题，再承接活动信息。</div>
+            </div>
+          </div>
+          <div class="step-actions"><button class="btn-ghost prev">上一步</button><button class="btn-primary next">下一步</button></div>
+        </article>
+      </section>
+    </section>
+
+    <div class="drawer-backdrop" id="historyBackdrop"></div>
+    <aside class="history-drawer" id="historyDrawer" aria-label="历史甲方原话">
+      <div class="drawer-head">
+        <div>
+          <div class="label">Local References</div>
+          <h2>历史甲方原话</h2>
+          <p>上传本地文件，作为本次解码的参考材料。</p>
+        </div>
+        <button class="btn-ghost" id="closeHistory" type="button">关闭</button>
+      </div>
+
+      <label class="upload-zone" for="historyFileInput">
+        <strong>点击上传历史材料</strong>
+        <span>支持 PDF / 图片 / PPTX / Word / Excel</span>
+        <small>文件仅用于当前浏览器演示，不会真正上传服务器。</small>
+        <input id="historyFileInput" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.txt" />
+      </label>
+
+      <div class="file-list" id="fileList">
+        <div class="empty-files">还没有上传文件。</div>
+      </div>
+
+      <div class="drawer-actions">
+        <button id="confirmHistory" type="button">确认使用</button>
+        <button id="closeHistoryBottom" type="button">关闭</button>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const views = {
+      landing: document.getElementById("landing"),
+      workflowHome: document.getElementById("workflowHome"),
+      inputView: document.getElementById("inputView"),
+      decodeView: document.getElementById("decodeView")
+    };
+    const topbar = document.querySelector(".topbar");
+    const navSteps = Array.from(document.querySelectorAll(".nav-step"));
+    const panels = Array.from(document.querySelectorAll(".step-panel"));
+    const feedback = document.getElementById("feedback");
+    const rawQuote = document.getElementById("rawQuote");
+    const stageMetric = document.getElementById("stageMetric");
+    const sceneMetric = document.getElementById("sceneMetric");
+    const goalMetric = document.getElementById("goalMetric");
+    const keyInsightLine = document.getElementById("keyInsightLine");
+    const explicitDemandList = document.getElementById("explicitDemandList");
+    const implicitDemandList = document.getElementById("implicitDemandList");
+    const coreTensionGrid = document.getElementById("coreTensionGrid");
+    const questionsGrid = document.getElementById("questionsGrid");
+    const nextActionsGrid = document.getElementById("nextActionsGrid");
+    const proposalSamplesGrid = document.getElementById("proposalSamplesGrid");
+    const questionLine = document.getElementById("questionLine");
+    const sampleJudge = document.getElementById("sampleJudge");
+    const copyReply = document.getElementById("copyReply");
+    const replyText = document.getElementById("replyText");
+    const historyBtn = document.getElementById("historyBtn");
+    const historyDrawer = document.getElementById("historyDrawer");
+    const historyBackdrop = document.getElementById("historyBackdrop");
+    const closeHistory = document.getElementById("closeHistory");
+    const closeHistoryBottom = document.getElementById("closeHistoryBottom");
+    const confirmHistory = document.getElementById("confirmHistory");
+    const historyFileInput = document.getElementById("historyFileInput");
+    const fileList = document.getElementById("fileList");
+    const selectedRef = document.getElementById("selectedRef");
+    const stepRefNote = document.getElementById("stepRefNote");
+    let historyFiles = [];
+    let selectedFiles = [];
+    let currentStep = 1;
+    let maxVisited = 1;
+    let decoderResult = null;
+
+    const DECODER_SYSTEM_PROMPT = `
+你是“言外之意 Subtext”的 Client Feedback Decoder。
+你的角色是：资深广告策略顾问 + 资深 AE。你擅长从客户模糊反馈中识别真实诉求、潜台词、甲方纠结点、需要提前替客户想一遍的地方和下一步动作。
+
+任务：
+用户会输入客户反馈、项目场景、当前阶段、输出目标和可选参考材料。你要把客户反馈解码成广告团队可以直接执行的行动卡。
+
+输出重点：
+1. 不要只总结客户说了什么，要判断客户真正担心什么。
+2. Key Insight 必须像“潜台词揭示”，不要写成平淡总结。
+3. Real Demand 要拆成显性需求和隐性诉求。
+4. Core Tension 必须用 X vs Y 表达拉扯关系，并给出左右倾向百分比和一句倾向判断。
+5. Next Actions 必须具体到下一版方案、文案、视觉、脚本或客户沟通怎么改。
+6. Client Reply 要能直接发给客户，专业、稳妥、不冒犯。
+7. Proposal Samples 要给 3 个方向确认小样，帮助 AE 拿去和客户确认；不要输出负面的风险提示，改用方向亮点、情绪价值和推荐标签。
+8. Questions To Confirm 用来指出哪些点不能乱猜，需要向客户确认。
+
+Key Insight 示例风格：
+- 客户不是觉得画面不好看，而是担心广告好看但不卖货。
+- 客户不是单纯要年轻化，而是害怕年轻化之后失去品牌质感。
+- 客户不是要更多信息，而是需要一个让用户立刻行动的理由。
+
+Next Actions 要求：
+每条必须包含 title、detail、reason。
+不要写“优化视觉”“加强卖点”“提升质感”这种空话，除非后面跟着非常具体的做法。
+
+严格输出 JSON，不要 Markdown，不要解释。结构如下：
+{
+  "keyInsight": "",
+  "realDemand": {
+    "explicit": [],
+    "implicit": []
+  },
+  "coreTension": [
+    { "left": "", "right": "", "leftPercent": 50, "rightPercent": 50, "note": "" }
+  ],
+  "nextActions": [
+    { "title": "", "detail": "", "reason": "" }
+  ],
+  "clientReply": "",
+  "proposalSamples": [
+    { "name": "", "strategy": "", "sampleCopy": "", "solves": "", "highlight": "", "recommend": "" }
+  ],
+  "questionsToConfirm": []
+}
+
+风格：
+像广告公司资深策略/AE写出来的；有洞察但不过度文艺；有判断但不乱猜；能落到下一版方案、文案、视觉、脚本或客户沟通上。如果信息不足，把需要补充的内容放进 questionsToConfirm。避免空泛词：优化、提升、加强、深化、赋能、打造、升级。
+`.trim();
+
+    function showView(id) {
+      Object.values(views).forEach((view) => view.classList.remove("active"));
+      views[id].classList.add("active");
+      if (id === "decodeView") setStep(currentStep);
+    }
+
+    function setStep(step) {
+      currentStep = Math.max(1, Math.min(7, Number(step)));
+      maxVisited = Math.max(maxVisited, currentStep);
+      if (topbar) topbar.style.setProperty("--progress", `${((currentStep - 1) / 6) * 86}%`);
+      navSteps.forEach((btn) => {
+        const n = Number(btn.dataset.step);
+        btn.classList.toggle("active", n === currentStep);
+        btn.classList.toggle("done", n < currentStep || n < maxVisited);
+        const label = btn.querySelector(".nav-label");
+        if (label) label.textContent = n === currentStep ? btn.dataset.full : btn.dataset.short;
+      });
+      panels.forEach((panel) => panel.classList.toggle("active", Number(panel.dataset.panel) === currentStep));
+    }
+
+    function activeChipText(groupName, fallback) {
+      const chip = document.querySelector(`[data-group="${groupName}"] .chip.active`);
+      return chip ? chip.textContent.trim() : fallback;
+    }
+
+    function syncInputParams() {
+      const scene = activeChipText("scene", "新品上市");
+      const stage = activeChipText("stage", "初稿反馈");
+      const goal = activeChipText("goal", "整理需求");
+      if (stageMetric) stageMetric.textContent = stage;
+      if (sceneMetric) sceneMetric.textContent = `${scene} / 产品卖点`;
+    }
+
+    function decoderInput() {
+      return {
+        feedback: feedback.value.trim(),
+        projectScene: activeChipText("scene", "新品上市"),
+        stage: activeChipText("stage", "初稿反馈"),
+        outputGoal: activeChipText("goal", "整理需求"),
+        references: selectedFiles.map((file) => file.name)
+      };
+    }
+
+    function buildDecoderPrompt(input) {
+      return {
+        system: DECODER_SYSTEM_PROMPT,
+        user: JSON.stringify({
+          clientFeedback: input.feedback,
+          projectScene: input.projectScene,
+          currentStage: input.stage,
+          outputGoal: input.outputGoal,
+          referenceFiles: input.references
+        }, null, 2)
+      };
+    }
+
+    function demoDecode(input) {
+      const wantsPromo = /半价|活动|利益|促销|到店|转化/.test(input.feedback + input.outputGoal);
+      const wantsTone = /年轻|网红|花哨|质感|高级|品牌/.test(input.feedback);
+      const wantsProduct = /想喝|卖点|产品|口感|香气|吸引力/.test(input.feedback);
+      return {
+        keyInsight: wantsPromo
+          ? "客户不是觉得画面不好看，而是担心广告好看但不卖货。"
+          : wantsTone
+            ? "客户不是单纯要年轻化，而是害怕年轻化之后失去品牌质感。"
+            : "客户不是要更多信息，而是需要一个让用户立刻行动的理由。",
+        realDemand: {
+          explicit: [
+            wantsProduct ? "产品本身要更有“想喝”的感觉" : "核心卖点需要被用户第一眼看见",
+            wantsPromo ? "第二杯半价要从角落信息变成明确购买理由" : "主信息需要更快被读懂",
+            wantsTone ? "视觉和文案要更年轻，但不能显得网红化" : "画面需要保留当前被认可的氛围感"
+          ],
+          implicit: [
+            "客户希望下一版不只是好看，还能解释用户为什么现在要买",
+            "客户在担心调性和转化之间失衡：卖货太重会廉价，氛围太重又不动销",
+            "客户需要一版能拿去内部说服的清晰方向，而不是继续靠审美判断拉扯"
+          ]
+        },
+        coreTension: [
+          { left: "年轻化", right: "品牌质感", leftPercent: 65, rightPercent: 35, note: "客户想要年轻化，但不想牺牲品牌安全感。" },
+          { left: "氛围感", right: "卖货感", leftPercent: 40, rightPercent: 60, note: "客户当前更偏向“卖货感”，但不希望画面变硬。" },
+          { left: "活动信息", right: "不显廉价", leftPercent: 58, rightPercent: 42, note: "活动要更清楚，但不能像甩卖。" },
+          { left: "品牌露出", right: "不硬广", leftPercent: 52, rightPercent: 48, note: "露出要更明确，但表达仍要轻。" }
+        ],
+        nextActions: [
+          {
+            title: "把主视觉从“夏日氛围”改成“第一眼想喝”",
+            detail: "主画面放大产品杯、冰块、水珠和白桃切面，减少纯背景氛围占比，让用户先看到口感线索。",
+            reason: "客户已经认可氛围，下一版真正要补的是产品吸引力。"
+          },
+          {
+            title: "把第二杯半价写成尝鲜理由",
+            detail: "不要只放活动角标，改成“今天的降温计划：白桃冰美式，第二杯半价”这类场景化表达。",
+            reason: "利益点需要承担“现在就买”的理由，而不是作为附属信息存在。"
+          },
+          {
+            title: "给年轻化设定边界",
+            detail: "用留白、冷感材质、轻口语文案表达年轻感，避开高饱和贴纸、过密弹幕和夸张网感符号。",
+            reason: "客户要的是更年轻的表达，不是更网红的视觉噪音。"
+          }
+        ],
+        clientReply: "收到，我们理解您这边主要希望下一版不只是保留夏日氛围感，而是进一步把产品本身的吸引力和到店购买理由说清楚。下一版我们会把重点从单纯“好看清爽”调整为“清爽口感 + 明确利益点”，同时控制年轻化表达的尺度，避免过度网红化，保持品牌质感。",
+        proposalSamples: [
+          {
+            name: "食欲感强化版",
+            strategy: "强化产品本身的清爽、白桃香气和冰爽口感。",
+            sampleCopy: "白桃香气撞上冰爽美式，一口把夏天降下来。",
+            solves: "解决产品吸引力不足、画面像氛围图的问题。",
+            highlight: "第一眼就能激发“想喝”的欲望，适合解决产品吸引力不足的问题。",
+            recommend: "主推方向"
+          },
+          {
+            name: "活动利益强化版",
+            strategy: "把第二杯半价变成尝鲜理由，而不是廉价促销。",
+            sampleCopy: "今天的降温计划：白桃冰美式，第二杯半价。",
+            solves: "解决购买理由不清晰、活动信息存在感弱的问题。",
+            highlight: "把优惠变成轻松尝鲜的理由，让用户觉得现在买刚刚好。",
+            recommend: "优先给客户看"
+          },
+          {
+            name: "质感年轻化版",
+            strategy: "用留白、冷感材质和轻文案表达年轻感。",
+            sampleCopy: "少一点燥热，多一口白桃冰感。",
+            solves: "解决年轻化和品牌质感之间的尺度问题。",
+            highlight: "在年轻感和品牌质感之间留出平衡，让客户放心不会网红化。",
+            recommend: "备选方向"
+          }
+        ],
+        questionsToConfirm: [
+          "这次更想优先强化“产品想喝感”，还是“第二杯半价”的活动利益？",
+          "年轻化的边界在哪里？是文案更轻松，还是视觉更活泼？",
+          "客户希望保留品牌质感，具体是指配色、字体、画面留白，还是整体调性？"
+        ]
+      };
+    }
+
+    function listItems(items) {
+      return (items || []).map((item) => `<li>${item}</li>`).join("");
+    }
+
+    function renderDecoderOutput(result) {
+      if (!result) return;
+      if (keyInsightLine) keyInsightLine.textContent = result.keyInsight || "";
+      if (goalMetric) goalMetric.textContent = result.keyInsight || "";
+      if (explicitDemandList) explicitDemandList.innerHTML = listItems(result.realDemand?.explicit);
+      if (implicitDemandList) implicitDemandList.innerHTML = listItems(result.realDemand?.implicit);
+      if (coreTensionGrid) {
+        coreTensionGrid.innerHTML = (result.coreTension || []).map((item, index) => {
+          const left = Number(item.leftPercent ?? (index === 1 ? 40 : 60));
+          const right = Number(item.rightPercent ?? (100 - left));
+          return `
+          <div class="vs-card tension-card">
+            <div class="tension-row"><span>${item.left}</span><b>VS</b><span>${item.right}</span></div>
+            <div class="tension-bar"><div class="tension-fill" style="width:${left}%"></div></div>
+            <div class="tension-percent"><span>${left}%</span><span>${right}%</span></div>
+            <p class="tension-note">倾向判断：${item.note || `客户当前更偏向“${left >= right ? item.left : item.right}”。`}</p>
+          </div>
+        `;
+        }).join("");
+      }
+      if (nextActionsGrid) {
+        nextActionsGrid.innerHTML = (result.nextActions || []).slice(0, 3).map((item, index) => `
+          <div class="role-card"><b data-icon="↗">${String(index + 1).padStart(2, "0")}</b><h3>${item.title}</h3><p>${item.detail}<br><span class="label">WHY</span> ${item.reason}</p></div>
+        `).join("");
+      }
+      if (questionsGrid) {
+        questionsGrid.innerHTML = (result.questionsToConfirm || []).slice(0, 3).map((question, index) => `
+          <button class="question-card${index === 0 ? " active" : ""}">${question}</button>
+        `).join("");
+      }
+      if (questionLine && result.questionsToConfirm?.length) {
+        questionLine.textContent = `老师，我们理解您希望下一版既解决购买理由，也保持品牌质感。这里想跟您确认一下，${result.questionsToConfirm[0]}`;
+      }
+      if (replyText && result.clientReply) replyText.textContent = result.clientReply;
+      if (proposalSamplesGrid) {
+        proposalSamplesGrid.innerHTML = (result.proposalSamples || []).slice(0, 3).map((sample, index) => {
+          const letter = ["A", "B", "C"][index] || String(index + 1);
+          const active = index === 0 ? " active" : "";
+          const judge = `AI 判断：你选择了【${sample.name}】，说明本轮更应该优先解决“${sample.solves || sample.strategy}”的问题。`;
+          return `
+            <button class="sample-card${active}" data-name="${sample.name}" data-judge="${judge}" data-letter="${letter}">
+              <div class="sample-preview">视觉小样预览</div>
+              <div class="sample-meta"><b>${letter}</b><span class="recommend-pill">${sample.recommend || "推荐"}</span></div>
+              <h3>${sample.name}</h3><p>策略：${sample.strategy}</p><p class="line">${sample.sampleCopy}</p><p class="highlight">方向亮点：${sample.highlight || sample.solves}</p><p>解决的问题：${sample.solves}</p>
+              <span class="download-sample">下载小样</span>
+            </button>
+          `;
+        }).join("");
+      }
+      const firstSample = result.proposalSamples?.[0];
+      if (sampleJudge && firstSample) {
+        sampleJudge.textContent = `AI 判断：你选择了【${firstSample.name}】，说明本轮更应该优先解决“${firstSample.solves}”的问题。`;
+      }
+      bindDynamicCards();
+    }
+
+    function runDecoder() {
+      const input = decoderInput();
+      window.subtextLastPrompt = buildDecoderPrompt(input);
+      decoderResult = demoDecode(input);
+      renderDecoderOutput(decoderResult);
+      return decoderResult;
+    }
+
+    function openHistory() {
+      historyDrawer.classList.add("open");
+      historyBackdrop.classList.add("open");
+    }
+
+    function closeHistoryPanel() {
+      historyDrawer.classList.remove("open");
+      historyBackdrop.classList.remove("open");
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    function fileTypeLabel(file) {
+      const ext = file.name.split(".").pop().toUpperCase();
+      return ext || "FILE";
+    }
+
+    function saveHistoryMeta() {
+      const meta = historyFiles.map(({ id, name, type, size, uploadedAt, selected }) => ({ id, name, type, size, uploadedAt, selected }));
+      localStorage.setItem("subtextHistoryFiles", JSON.stringify(meta));
+    }
+
+    function updateReferenceUI() {
+      selectedFiles = historyFiles.filter((file) => file.selected);
+      if (selectedFiles.length) {
+        const names = selectedFiles.map((file) => file.name).join(" / ");
+        selectedRef.textContent = `已选择参考材料：${names}`;
+        selectedRef.classList.add("show");
+        stepRefNote.textContent = `参考材料：已导入 ${selectedFiles.length} 个历史文件，Agent 将结合甲方爸爸的话进行判断。`;
+      } else {
+        selectedRef.textContent = "";
+        selectedRef.classList.remove("show");
+        stepRefNote.textContent = "参考材料：暂未导入历史文件。";
+      }
+      saveHistoryMeta();
+    }
+
+    function renderFiles() {
+      if (!historyFiles.length) {
+        fileList.innerHTML = '<div class="empty-files">还没有上传文件。</div>';
+        updateReferenceUI();
+        return;
+      }
+      fileList.innerHTML = "";
+      historyFiles.forEach((file) => {
+        const card = document.createElement("div");
+        card.className = `file-card${file.selected ? " active" : ""}`;
+        card.dataset.id = file.id;
+        const icon = file.preview
+          ? `<div class="file-icon"><img src="${file.preview}" alt=""></div>`
+          : `<div class="file-icon">${file.type}</div>`;
+        card.innerHTML = `
+          ${icon}
+          <div class="file-meta">
+            <div class="file-name" title="${file.name}">${file.name}</div>
+            <div class="file-info">${file.type} · ${file.sizeText} · ${file.uploadedAt}</div>
+            <div class="file-info">${file.selected ? "已读取 / 可作为参考材料" : "等待解码 / 可作为参考材料"}</div>
+            <div class="file-actions">
+              <button type="button" data-use="${file.id}">使用此文件</button>
+              <button type="button" data-remove="${file.id}">移除</button>
+            </div>
+          </div>
+        `;
+        fileList.appendChild(card);
+      });
+      updateReferenceUI();
+    }
+
+    function addFiles(files) {
+      Array.from(files).forEach((file) => {
+        const item = {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          name: file.name,
+          type: fileTypeLabel(file),
+          size: file.size,
+          sizeText: formatSize(file.size),
+          uploadedAt: new Date().toLocaleString("zh-CN", { hour12: false }),
+          selected: false,
+          preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : ""
+        };
+        historyFiles.unshift(item);
+      });
+      renderFiles();
+    }
+
+    function bindDynamicCards() {
+      document.querySelectorAll(".question-card").forEach((card) => {
+        card.onclick = () => {
+          document.querySelectorAll(".question-card").forEach((item) => item.classList.remove("active"));
+          card.classList.add("active");
+          questionLine.textContent = `老师，我们理解您希望下一版既解决购买理由，也保持品牌质感。这里想跟您确认一下，${card.textContent}`;
+        };
+      });
+
+      document.querySelectorAll(".sample-card").forEach((card) => {
+        card.onclick = () => {
+          document.querySelectorAll(".sample-card").forEach((item) => item.classList.remove("active"));
+          card.classList.add("active");
+          sampleJudge.textContent = card.dataset.judge;
+          const download = card.querySelector(".download-sample");
+          if (download) {
+            download.textContent = "已生成";
+            setTimeout(() => download.textContent = "下载小样", 1200);
+          }
+        };
+      });
+    }
+
+    document.getElementById("startBtn").addEventListener("click", () => showView("inputView"));
+    document.getElementById("decodeBtn").addEventListener("click", () => {
+      rawQuote.textContent = feedback.value.trim();
+      syncInputParams();
+      updateReferenceUI();
+      runDecoder();
+      currentStep = 1;
+      maxVisited = 1;
+      showView("decodeView");
+    });
+
+    document.querySelectorAll("[data-go]").forEach((btn) => {
+      btn.addEventListener("click", () => showView(btn.dataset.go));
+    });
+
+    document.querySelectorAll("[data-home-step]").forEach((card) => {
+      card.addEventListener("click", () => {
+        rawQuote.textContent = feedback.value.trim();
+        syncInputParams();
+        updateReferenceUI();
+        runDecoder();
+        currentStep = Number(card.dataset.homeStep);
+        maxVisited = Math.max(maxVisited, currentStep);
+        showView("decodeView");
+      });
+    });
+
+    navSteps.forEach((btn) => btn.addEventListener("click", () => setStep(btn.dataset.step)));
+    document.querySelectorAll(".next").forEach((btn) => btn.addEventListener("click", () => setStep(currentStep + 1)));
+    document.querySelectorAll(".prev").forEach((btn) => btn.addEventListener("click", () => setStep(currentStep - 1)));
+
+    document.querySelectorAll(".chip-group").forEach((group) => {
+      group.addEventListener("click", (event) => {
+        const chip = event.target.closest(".chip");
+        if (!chip) return;
+        if (chip.classList.contains("custom-trigger")) {
+          document.getElementById("customScene")?.classList.add("show");
+        }
+        group.querySelectorAll(".chip").forEach((item) => item.classList.remove("active"));
+        chip.classList.add("active");
+        syncInputParams();
+      });
+    });
+
+    document.getElementById("confirmScene")?.addEventListener("click", () => {
+      const input = document.getElementById("customSceneInput");
+      const customChip = document.querySelector(".custom-trigger");
+      const value = input.value.trim();
+      if (!value || !customChip) return;
+      customChip.textContent = value;
+      customChip.classList.add("active");
+      document.querySelectorAll('[data-group="scene"] .chip').forEach((item) => {
+        if (item !== customChip) item.classList.remove("active");
+      });
+      syncInputParams();
+    });
+
+    historyBtn.addEventListener("click", openHistory);
+    closeHistory.addEventListener("click", closeHistoryPanel);
+    closeHistoryBottom.addEventListener("click", closeHistoryPanel);
+    historyBackdrop.addEventListener("click", closeHistoryPanel);
+    confirmHistory.addEventListener("click", closeHistoryPanel);
+
+    historyFileInput.addEventListener("change", (event) => {
+      addFiles(event.target.files);
+      event.target.value = "";
+    });
+
+    fileList.addEventListener("click", (event) => {
+      const useId = event.target.dataset.use;
+      const removeId = event.target.dataset.remove;
+      if (useId) {
+        const file = historyFiles.find((item) => item.id === useId);
+        if (file) {
+          file.selected = true;
+          if (!feedback.value.includes(`已导入参考材料：${file.name}`)) {
+            feedback.value = `${feedback.value.trim()}\n\n已导入参考材料：${file.name}`;
+          }
+          renderFiles();
+        }
+      }
+      if (removeId) {
+        historyFiles = historyFiles.filter((item) => item.id !== removeId);
+        renderFiles();
+      }
+    });
+
+    document.querySelectorAll(".question-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        document.querySelectorAll(".question-card").forEach((item) => item.classList.remove("active"));
+        card.classList.add("active");
+        questionLine.textContent = `老师，我们理解您希望下一版既加强新品的购买理由，也保持品牌质感。这里想跟您确认一下，${card.textContent}`;
+      });
+    });
+
+    document.querySelectorAll(".sample-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        document.querySelectorAll(".sample-card").forEach((item) => item.classList.remove("active"));
+        card.classList.add("active");
+        sampleJudge.textContent = card.dataset.judge;
+        const download = card.querySelector(".download-sample");
+        if (download) {
+          download.textContent = "已生成";
+          setTimeout(() => download.textContent = "下载小样", 1200);
+        }
+      });
+    });
+
+    document.querySelectorAll(".op-feedback").forEach((button) => {
+      button.dataset.originalText = button.textContent;
+      button.addEventListener("click", () => {
+        button.textContent = "Exported";
+        setTimeout(() => button.textContent = button.dataset.originalText, 1200);
+      });
+    });
+
+    copyReply.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(replyText.textContent);
+        copyReply.textContent = "Copied";
+        setTimeout(() => copyReply.textContent = "Copy", 1200);
+      } catch (error) {
+        copyReply.textContent = "Select";
+      }
+    });
+  </script>
+</body>
+</html>

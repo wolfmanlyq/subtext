@@ -1,13 +1,13 @@
 "use client";
 
 const STEPS = [
-  { n: 1, title: "原话识别", desc: "先听懂客户表面说了什么" },
-  { n: 2, title: "需求拆解", desc: "拆开显性需求和隐性诉求" },
-  { n: 3, title: "核心矛盾", desc: "看见客户真正拉扯的地方" },
-  { n: 4, title: "风险识别", desc: "提前发现返工和误读风险" },
-  { n: 5, title: "待确认项", desc: "有些点不能猜,要反问" },
-  { n: 6, title: "分岗位执行", desc: "让每个角色知道接下来改什么" },
-  { n: 7, title: "最终交付", desc: "生成回复话术、执行清单和方向小样" },
+  { n: 1, title: "甲方原声带", desc: "先把原话完整接住" },
+  { n: 2, title: "他说出口的 & 他真正担心的", desc: "把明话和潜台词分开" },
+  { n: 3, title: "甲方纠结点", desc: "看见客户左右为难的地方" },
+  { n: 4, title: "提前替客户想一遍", desc: "不是挑刺,是先补逻辑" },
+  { n: 5, title: "还得问甲方爸爸", desc: "有些点不能猜,要问准" },
+  { n: 6, title: "先给甲方看这几个方向", desc: "先定方向,再开工" },
+  { n: 7, title: "接下来谁动手", desc: "把方向拆成团队动作" },
 ];
 
 export function WorkflowHome({
@@ -20,7 +20,6 @@ export function WorkflowHome({
   onPickStep: (step: number) => void;
 }) {
   function handle(step: number) {
-    // 已有解码结果才能直达某步;否则先去放入客户信号
     if (hasResult) onPickStep(step);
     else onNewSignal();
   }
@@ -32,10 +31,10 @@ export function WorkflowHome({
           <div>
             <div className="label">Workflow Home</div>
             <h2>解码工作台</h2>
-            <p>选择一个步骤直接进入,也可以先放入一段新的客户信号。</p>
+            <p>选择一个步骤直接进入,也可以先放入一段新的甲方爸爸的话。</p>
           </div>
           <button className="btn-primary" onClick={onNewSignal}>
-            放入客户信号
+            甲方爸爸的话
           </button>
         </div>
         <div className="workflow-grid">

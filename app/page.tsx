@@ -56,9 +56,10 @@ export default function Page() {
     setSamplesError(null);
     try {
       const summary = [
-        card.agentJudgment,
-        ...card.explicitNeeds,
-        ...card.conflicts.map((c) => `${c.left} vs ${c.right}`),
+        card.keyInsight,
+        ...card.realDemand.explicit,
+        ...card.realDemand.implicit,
+        ...card.coreTension.map((t) => `${t.left} vs ${t.right}`),
       ]
         .filter(Boolean)
         .join("；");

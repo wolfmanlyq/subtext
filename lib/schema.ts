@@ -1,32 +1,40 @@
 import { z } from "zod";
 
-export const ConflictSchema = z.object({
-  left: z.string(),
-  right: z.string(),
+export const RealDemandSchema = z.object({
+  explicit: z.array(z.string()),
+  implicit: z.array(z.string()),
 });
 
-export const RoleActionSchema = z.object({
+export const TensionSchema = z.object({
+  left: z.string(),
+  right: z.string(),
+  leftPercent: z.number(),
+  rightPercent: z.number(),
+  note: z.string(),
+});
+
+export const NextActionSchema = z.object({
   role: z.string(),
   title: z.string(),
-  desc: z.string(),
+  detail: z.string(),
+  reason: z.string(),
 });
 
 export const ActionCardSchema = z.object({
   needMoreInfo: z.boolean(),
   emotionIntensity: z.string(),
-  agentJudgment: z.string(),
-  feedbackTypes: z.array(z.string()),
-  explicitNeeds: z.array(z.string()),
-  implicitNeeds: z.array(z.string()),
-  conflicts: z.array(ConflictSchema),
-  risks: z.array(z.string()),
+  keyInsight: z.string(),
+  realDemand: RealDemandSchema,
+  coreTension: z.array(TensionSchema),
+  foresight: z.array(z.string()),
   evidence: z.array(z.string()),
-  questionsToAsk: z.array(z.string()),
-  roleActions: z.array(RoleActionSchema),
+  questionsToConfirm: z.array(z.string()),
+  nextActions: z.array(NextActionSchema),
   checklist: z.array(z.string()),
-  replyScript: z.string(),
+  clientReply: z.string(),
 });
 
-export type Conflict = z.infer<typeof ConflictSchema>;
-export type RoleAction = z.infer<typeof RoleActionSchema>;
+export type RealDemand = z.infer<typeof RealDemandSchema>;
+export type Tension = z.infer<typeof TensionSchema>;
+export type NextAction = z.infer<typeof NextActionSchema>;
 export type ActionCard = z.infer<typeof ActionCardSchema>;

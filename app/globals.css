@@ -1537,4 +1537,650 @@ li::before {
   }
 }
 
+/* ========================================================================
+   prototype-3 细化:绿色流程导航、步骤图标、明话/潜台词、纠结点进度条等
+   ======================================================================== */
+.brand-logo h1 {
+  font-size: clamp(30px, 4.3vw, 54px);
+  line-height: 1.08;
+  letter-spacing: 0.13em;
+  font-weight: 560;
+}
+.brand-logo .label {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+}
+.brand-logo span {
+  font-size: 13px;
+  letter-spacing: 0.34em;
+}
+.slogan {
+  max-width: 720px;
+  font-size: clamp(19px, 2.35vw, 30px);
+  line-height: 1.48;
+  letter-spacing: 0.05em;
+  font-weight: 520;
+}
+.slogan strong {
+  color: #3f8056;
+  text-shadow: 0 0 18px rgba(79, 143, 99, 0.16);
+}
+
+/* 绿色流程导航 */
+.nav-step {
+  color: #4f8f63;
+  opacity: 0.94;
+}
+.nav-step .nav-label {
+  color: #4f8f63;
+  font-weight: 620;
+  letter-spacing: 0.02em;
+}
+.nav-step .nav-num {
+  color: #4f8f63;
+  background: rgba(236, 248, 239, 0.82);
+  font-weight: 650;
+}
+.nav-step.done .nav-label,
+.nav-step.done .nav-num {
+  color: #3f8056;
+}
+.nav-step.active .nav-label {
+  color: #2f6f46;
+  font-weight: 900;
+  text-shadow: 0 0 14px rgba(47, 111, 70, 0.24);
+}
+.nav-step.active .nav-num {
+  color: #fff;
+  background: #2f6f46;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.5), 0 0 0 7px rgba(79, 143, 99, 0.14), 0 0 28px rgba(47, 111, 70, 0.32);
+}
+.nav-step.active::before {
+  background: linear-gradient(180deg, rgba(47, 111, 70, 0.9), rgba(47, 111, 70, 0));
+}
+.nav-step.active::after {
+  background: #2f6f46;
+  box-shadow: 0 0 18px rgba(47, 111, 70, 0.48);
+}
+.topbar::before {
+  background: rgba(79, 143, 99, 0.24);
+}
+.topbar::after {
+  background: linear-gradient(90deg, rgba(79, 143, 99, 0.45), rgba(47, 111, 70, 0.9));
+}
+
+/* option-card chip 强化 */
+.option-card .chip-title {
+  color: #223029;
+  font-size: 18px;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
+}
+.option-card .chip {
+  min-height: 42px;
+  color: #2b3930;
+  font-weight: 760;
+  border-color: rgba(255, 255, 255, 0.72);
+}
+.option-card .chip.active {
+  color: #214d32;
+  background: linear-gradient(180deg, rgba(236, 248, 239, 0.96), rgba(206, 236, 213, 0.74));
+  border-color: rgba(79, 143, 99, 0.32);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.82), 0 14px 32px rgba(79, 143, 99, 0.18), 0 0 0 3px rgba(79, 143, 99, 0.08);
+}
+
+/* 步骤标题前的小图标 */
+.step-head h2 {
+  font-weight: 560;
+  letter-spacing: 0.015em;
+  line-height: 1.18;
+}
+.step-head h2::before {
+  display: inline-grid;
+  place-items: center;
+  margin-right: 8px;
+  font-family: "Segoe UI Symbol", "Apple Color Emoji", sans-serif;
+  font-size: 0.78em;
+  opacity: 0.68;
+  vertical-align: 0.06em;
+}
+.step-panel[data-panel="1"] .step-head h2::before { content: "⌁"; }
+.step-panel[data-panel="2"] .step-head h2::before { content: "◐"; }
+.step-panel[data-panel="3"] .step-head h2::before { content: "⚖"; }
+.step-panel[data-panel="4"] .step-head h2::before { content: "◇"; }
+.step-panel[data-panel="5"] .step-head h2::before { content: "?"; }
+.step-panel[data-panel="6"] .step-head h2::before { content: "↗"; }
+.step-panel[data-panel="7"] .step-head h2::before { content: "□"; }
+
+/* Step1:言外之意一句话 + 紧凑指标 */
+.key-insight-line {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  color: #2f3a40;
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  line-height: 1.65;
+  display: flex;
+  align-items: center;
+}
+.key-insight-line::before {
+  content: "✦";
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  color: #4f8f63;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.86), 0 8px 22px rgba(79, 143, 99, 0.16);
+}
+.metric-grid-compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.metric {
+  min-height: 118px;
+  gap: 10px;
+  padding: 20px;
+}
+.metric strong {
+  font-size: 11px;
+  font-weight: 720;
+  letter-spacing: 0.12em;
+}
+.metric span {
+  font-size: 18px;
+  line-height: 1.36;
+  font-weight: 560;
+}
+.metric.insight-metric span {
+  font-size: clamp(16px, 1.8vw, 24px);
+  line-height: 1.45;
+}
+
+/* Step2:他说出口的 / 他真正担心的 */
+.demand-grid {
+  align-items: stretch;
+  gap: 22px;
+}
+.demand-card {
+  position: relative;
+  padding: 28px;
+  overflow: hidden;
+}
+.demand-card.visible {
+  border-color: rgba(255, 255, 255, 0.82);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(231, 248, 238, 0.54));
+}
+.demand-card.subtext {
+  border-color: rgba(197, 216, 232, 0.76);
+  background: linear-gradient(180deg, rgba(244, 248, 255, 0.68), rgba(220, 232, 242, 0.48));
+}
+.demand-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  text-align: center;
+  color: #1f3427;
+}
+.demand-title h3 {
+  margin: 0;
+  font-size: clamp(22px, 2.4vw, 32px);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+.demand-title .icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.82), 0 10px 28px rgba(79, 143, 99, 0.14);
+  color: #4f8f63;
+  font-size: 21px;
+}
+.demand-card.subtext .demand-title {
+  color: #2f4d68;
+}
+.demand-card.subtext .icon {
+  color: #456c87;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.82), 0 10px 28px rgba(69, 108, 135, 0.14);
+}
+.micro-copy {
+  margin: 0 0 18px;
+  text-align: center;
+  color: #64727a;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.demand-card ul {
+  display: grid;
+  gap: 12px;
+  padding-left: 0;
+  list-style: none;
+}
+.demand-card li {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.42);
+  color: #28343a;
+}
+.demand-card li::before {
+  content: "•";
+  position: static;
+  margin-right: 8px;
+  width: auto;
+  height: auto;
+  background: transparent;
+  color: #4f8f63;
+}
+
+/* Step3:纠结点进度条 */
+.tension-card {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+.tension-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  color: #1f2428;
+  font-weight: 620;
+}
+.tension-row span:last-child {
+  text-align: right;
+}
+.tension-row b {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  color: #365844;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.84), 0 8px 22px rgba(79, 143, 99, 0.12);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+.tension-bar {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow: inset 0 1px 3px rgba(52, 78, 94, 0.12);
+}
+.tension-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(79, 143, 99, 0.8), rgba(226, 207, 142, 0.78), rgba(91, 129, 153, 0.72));
+}
+.tension-percent {
+  display: flex;
+  justify-content: space-between;
+  color: #64727a;
+  font-size: 12px;
+  line-height: 1;
+}
+.tension-note {
+  margin: 2px 0 0;
+  color: #365844;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* Step6:checklist 网格 */
+.checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.check-card {
+  min-height: 110px;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.72), 0 10px 28px rgba(52, 78, 94, 0.08);
+}
+.check-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.check-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1f2428;
+  font-weight: 640;
+}
+.check-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  color: #4f8f63;
+  font-size: 14px;
+}
+.check-tag {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 10px;
+  color: #37533f;
+  background: rgba(230, 241, 217, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.check-tag.add {
+  color: #42647c;
+  background: rgba(218, 235, 248, 0.72);
+}
+.check-tag.pending {
+  color: #7b5b32;
+  background: rgba(247, 230, 189, 0.7);
+}
+.check-card p {
+  margin: 0;
+  color: #667078;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* Step6:小样卡(预览嵌 iframe + 推荐标签 + 亮点) */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.sample-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+.sample-frame {
+  width: 100%;
+  height: 200px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 22px;
+  background: #fff;
+}
+.sample-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.recommend-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  color: #37533f;
+  background: rgba(230, 241, 217, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.sample-card .strategy {
+  margin: 0;
+  color: #667078;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.sample-card .line {
+  margin: 0;
+  color: #1f2428;
+  font-size: 15px;
+  font-weight: 620;
+  line-height: 1.4;
+}
+.sample-card .highlight {
+  margin: 0;
+  color: #365844;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.sample-card .select-btn {
+  margin-top: auto;
+  width: 100%;
+  min-height: 34px;
+  border-radius: 999px;
+  color: rgba(16, 21, 34, 0.86);
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7), 0 8px 18px rgba(43, 72, 73, 0.1);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+/* Step7:分岗位卡的角色徽标 */
+.role-card b {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin-bottom: 12px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: #315c43;
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.82), 0 10px 26px rgba(79, 143, 99, 0.12);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.role-card h3 {
+  margin-top: 4px;
+}
+
+/* Step4:咨询式风险列表 */
+.risk-list.consulting .risk-item {
+  border-left-color: rgba(79, 143, 99, 0.48);
+  background: rgba(255, 255, 255, 0.38);
+}
+
+/* 历史材料抽屉 */
+.feedback-wrap {
+  position: relative;
+}
+.history-btn {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: #263038;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.56));
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.78), 0 10px 24px rgba(43, 72, 73, 0.14);
+  backdrop-filter: blur(18px);
+  font-size: 13px;
+  font-weight: 750;
+  z-index: 2;
+}
+.selected-ref {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  color: #245b75;
+  background: rgba(207, 236, 255, 0.54);
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(31, 36, 40, 0.18);
+  backdrop-filter: blur(2px);
+  z-index: 80;
+}
+.history-drawer {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  bottom: 20px;
+  width: min(460px, calc(100vw - 40px));
+  border-radius: 34px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.6));
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.82), 0 34px 90px rgba(43, 72, 73, 0.22);
+  backdrop-filter: blur(28px) saturate(1.08);
+  z-index: 90;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 16px;
+  overflow: hidden;
+}
+.drawer-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+.drawer-head h2 {
+  margin: 7px 0 0;
+  color: #1f2428;
+  font-family: var(--title-font);
+  font-size: 26px;
+  font-weight: 650;
+}
+.drawer-head p {
+  margin: 7px 0 0;
+  color: #667078;
+  line-height: 1.5;
+  font-size: 13px;
+}
+.upload-zone {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 140px;
+  text-align: center;
+  border-radius: 28px;
+  border: 1px dashed rgba(36, 91, 117, 0.3);
+  background: rgba(255, 255, 255, 0.44);
+  cursor: pointer;
+  padding: 16px;
+}
+.upload-zone strong {
+  color: #1f2428;
+  font-size: 17px;
+}
+.upload-zone span {
+  color: #667078;
+  font-size: 13px;
+}
+.upload-zone small {
+  color: #7b878e;
+}
+.upload-zone input {
+  display: none;
+}
+.file-list {
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+.empty-files {
+  color: #667078;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.36);
+  text-align: center;
+  font-size: 13px;
+}
+.file-card {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.52);
+}
+.file-card.active {
+  background: rgba(207, 236, 255, 0.66);
+  border-color: rgba(115, 185, 232, 0.45);
+}
+.file-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: #245b75;
+  background: rgba(255, 255, 255, 0.62);
+  font-weight: 850;
+  font-size: 12px;
+}
+.file-name {
+  color: #1f2428;
+  font-weight: 760;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 5px;
+}
+.file-info {
+  color: #667078;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.file-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.file-actions button,
+.drawer-actions button {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: #263038;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  font-weight: 720;
+  cursor: pointer;
+}
+.drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 960px) {
+  .checklist-grid,
+  .metric-grid-compact {
+    grid-template-columns: 1fr;
+  }
+}
+
 
