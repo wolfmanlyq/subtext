@@ -73,6 +73,8 @@ test("多模态失败:去掉文档块重试一次,成功并标记 attachmentsDro
   // 第二次调用不含 document 块
   const secondContent = createMock.mock.calls[1][0].messages[0].content;
   expect(secondContent.some((b: { type: string }) => b.type === "document")).toBe(false);
+  // 恰好重试一次:共两次调用
+  expect(createMock).toHaveBeenCalledTimes(2);
 });
 
 test("超体积附件返回 400", async () => {
@@ -100,4 +102,6 @@ test("无附件且 SDK 失败返回 500(不重试)", async () => {
   expect(res.status).toBe(500);
   const json = await res.json();
   expect(json.error).toContain("boom");
+  // 无附件时不应触发降级重试:模型只被调用一次
+  expect(createMock).toHaveBeenCalledTimes(1);
 });
