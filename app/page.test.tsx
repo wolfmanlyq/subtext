@@ -146,3 +146,26 @@ test("core 已到但 delivery 挂起:Step6 显示解码中", async () => {
   expect(screen.queryByText("客户回复话术")).toBeNull();
   await waitFor(() => expect(screen.getByText(/解码中/)).toBeInTheDocument());
 });
+
+test("首页 Sign in 进入输入页", async () => {
+  vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+  render(<Page />);
+  await userEvent.click(screen.getByRole("button", { name: /Sign in/ }));
+  expect(screen.getByText("甲方爸爸的话")).toBeInTheDocument();
+});
+
+test("Step1 渲染情绪药丸;Step7 完成解码进 Step8 彩蛋,回到首页回 workflow", async () => {
+  vi.stubGlobal("fetch", routeFetch({
+    "/api/insight": insight, "/api/decode/core": core, "/api/decode/delivery": delivery, "/api/prototypes": samples,
+  }));
+  render(<Page />);
+  await userEvent.click(screen.getByRole("button", { name: /Start Now/ }));
+  await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
+  await waitFor(() => expect(document.querySelector(".emotion-pill")).not.toBeNull());
+
+  await userEvent.click(screen.getByRole("button", { name: /开工/ })); // 到 Step7
+  await userEvent.click(screen.getByRole("button", { name: "完成解码" }));
+  await waitFor(() => expect(screen.getByText(/莫｜生｜气/)).toBeInTheDocument());
+  await userEvent.click(screen.getByRole("button", { name: "回到首页" }));
+  await waitFor(() => expect(screen.getByText("解码工作台")).toBeInTheDocument());
+});
