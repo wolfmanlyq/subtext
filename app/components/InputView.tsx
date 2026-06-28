@@ -1,16 +1,54 @@
 "use client";
 import { useState } from "react";
 import { DEMO_INPUT, type AnalyzeInput } from "@/lib/demo";
+import {
+  type Attachment,
+  type AttachmentKind,
+  MAX_FILE_BYTES,
+} from "@/lib/attachment";
 
 const SCENES = ["新品上市", "活动促销", "社媒种草", "短视频脚本"];
 const STAGES = ["初稿反馈", "二轮修改", "执行前确认"];
 const GOALS = ["整理需求", "行动建议", "方向小样", "客户回复"];
 
-interface HistoryFile {
+const KIND_BY_MEDIA: Record<string, AttachmentKind> = {
+  "text/plain": "text",
+  "text/markdown": "text",
+  "application/pdf": "pdf",
+  "image/png": "image",
+  "image/jpeg": "image",
+  "image/webp": "image",
+};
+
+interface LoadedFile {
   id: string;
   name: string;
-  type: string;
+  kind: AttachmentKind;
+  mediaType: string;
+  data: string;
   selected: boolean;
+}
+
+function readAsText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result ?? ""));
+    r.onerror = () => reject(r.error);
+    r.readAsText(file);
+  });
+}
+
+function readAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result ?? "");
+      const comma = s.indexOf(",");
+      resolve(comma >= 0 ? s.slice(comma + 1) : s);
+    };
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
 }
 
 export function InputView({
@@ -20,7 +58,7 @@ export function InputView({
 }: {
   loading: boolean;
   onBack: () => void;
-  onDecode: (input: AnalyzeInput) => void;
+  onDecode: (input: AnalyzeInput, attachments: Attachment[]) => void;
 }) {
   const [feedback, setFeedback] = useState(DEMO_INPUT.feedback);
   const [projectType, setProjectType] = useState("新品上市");
@@ -30,10 +68,11 @@ export function InputView({
   const [customValue, setCustomValue] = useState("");
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [files, setFiles] = useState<HistoryFile[]>([]);
+  const [files, setFiles] = useState<LoadedFile[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const customActive = !SCENES.includes(projectType);
-  const selectedRefs = files.filter((f) => f.selected).map((f) => f.name);
+  const selected = files.filter((f) => f.selected);
 
   function pickScene(s: string) {
     setProjectType(s);
@@ -46,20 +85,34 @@ export function InputView({
     setCustomOpen(false);
   }
   function toggleGoal(g: string) {
-    setGoals((prev) =>
-      prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g],
-    );
+    setGoals((p) => (p.includes(g) ? p.filter((x) => x !== g) : [...p, g]));
   }
 
-  function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const picked = Array.from(e.target.files ?? []).map((f, i) => ({
-      id: `${Date.now()}-${i}`,
-      name: f.name,
-      type: (f.name.split(".").pop() ?? "FILE").toUpperCase(),
-      selected: false,
-    }));
-    setFiles((prev) => [...picked, ...prev]);
+  async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []);
     e.target.value = "";
+    const loaded: LoadedFile[] = [];
+    for (const file of picked) {
+      const kind = KIND_BY_MEDIA[file.type];
+      if (!kind) {
+        setNotice(`跳过不支持的文件类型:${file.name}`);
+        continue;
+      }
+      if (file.size > MAX_FILE_BYTES) {
+        setNotice(`跳过过大文件(>4MB):${file.name}`);
+        continue;
+      }
+      const data = kind === "text" ? await readAsText(file) : await readAsBase64(file);
+      loaded.push({
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name: file.name,
+        kind,
+        mediaType: file.type,
+        data,
+        selected: false,
+      });
+    }
+    if (loaded.length) setFiles((prev) => [...loaded, ...prev]);
   }
   function toggleFile(id: string) {
     setFiles((prev) =>
@@ -71,16 +124,16 @@ export function InputView({
   }
 
   function submit() {
-    const refLine = selectedRefs.length
-      ? `\n\n[参考材料]${selectedRefs.join("、")}`
-      : "";
-    onDecode({
-      feedback: feedback + refLine,
-      projectType,
-      stage,
-      audience: goals.join(" / "),
-      clientStyle: "",
-    });
+    const attachments: Attachment[] = selected.map((f) => ({
+      name: f.name,
+      kind: f.kind,
+      mediaType: f.mediaType,
+      data: f.data,
+    }));
+    onDecode(
+      { feedback, projectType, stage, audience: goals.join(" / "), clientStyle: "" },
+      attachments,
+    );
   }
 
   return (
@@ -112,9 +165,9 @@ export function InputView({
             ⌁ 历史记录
           </button>
         </div>
-        {selectedRefs.length > 0 && (
+        {selected.length > 0 && (
           <div className="selected-ref">
-            已选择参考材料:{selectedRefs.join(" / ")}
+            已选择参考材料:{selected.map((f) => f.name).join(" / ")}
           </div>
         )}
 
@@ -205,7 +258,7 @@ export function InputView({
               <div>
                 <div className="label">Local References</div>
                 <h2>历史甲方原话</h2>
-                <p>上传本地文件作为本次解码的参考材料(仅前端演示,不上传服务器)。</p>
+                <p>上传本地文件作为本次解码的参考材料(文本/PDF/图片;在浏览器读取,随解码一起发送)。</p>
               </div>
               <button className="btn-ghost" onClick={() => setDrawerOpen(false)}>
                 关闭
@@ -214,12 +267,13 @@ export function InputView({
 
             <label className="upload-zone">
               <strong>点击上传历史材料</strong>
-              <span>支持 PDF / 图片 / PPTX / Word / Excel</span>
-              <small>文件仅用于当前浏览器演示。</small>
+              <span>支持 文本 / PDF / 图片(单文件 ≤ 4MB)</span>
+              <small>{notice ?? "文件在浏览器读取后随解码请求发送。"}</small>
               <input
+                aria-label="上传历史材料"
                 type="file"
                 multiple
-                accept=".pdf,.png,.jpg,.jpeg,.webp,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.txt"
+                accept=".txt,.md,.pdf,.png,.jpg,.jpeg,.webp"
                 onChange={onUpload}
               />
             </label>
@@ -230,7 +284,7 @@ export function InputView({
               ) : (
                 files.map((f) => (
                   <div key={f.id} className={`file-card${f.selected ? " active" : ""}`}>
-                    <div className="file-icon">{f.type}</div>
+                    <div className="file-icon">{f.kind.toUpperCase()}</div>
                     <div>
                       <div className="file-name" title={f.name}>
                         {f.name}
