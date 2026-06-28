@@ -1,22 +1,21 @@
 import { test, expect, vi, beforeEach } from "vitest";
 
 const createMock = vi.fn();
-const getClientMock = vi.fn(() => ({ messages: { create: createMock } }));
-vi.mock("@/lib/anthropic", () => ({ MODEL: "claude-opus-4-8", getClient: () => getClientMock() }));
+vi.mock("@/lib/anthropic", () => ({ MODEL: "claude-opus-4-8", getClient: () => ({ messages: { create: createMock } }) }));
 
 import { POST } from "./route";
 import { DEMO_INPUT } from "@/lib/demo";
 
 beforeEach(() => {
   createMock.mockReset();
-  getClientMock.mockReset();
-  getClientMock.mockImplementation(() => ({ messages: { create: createMock } }));
 });
 
 function req(body: unknown): Request {
   return new Request("http://localhost/api/decode/delivery", { method: "POST", body: JSON.stringify(body) });
 }
-function fakeMessage(text: string) { return { content: [{ type: "text", text }] }; }
+function fakeToolUse(input: unknown) {
+  return { content: [{ type: "tool_use", name: "emit_delivery", input }] };
+}
 
 const core = {
   needMoreInfo: false,
@@ -33,12 +32,19 @@ const validDelivery = {
 };
 
 test("正常:返回 Delivery,且 core 摘要进了 prompt", async () => {
-  createMock.mockResolvedValue(fakeMessage(JSON.stringify(validDelivery)));
+  createMock.mockResolvedValue(fakeToolUse(validDelivery));
   const res = await POST(req({ ...DEMO_INPUT, core }));
   expect(res.status).toBe(200);
   expect((await res.json()).clientReply).toBe("收到,我们理解……");
-  const sentUser = createMock.mock.calls[0][0].messages[0].content;
-  expect(sentUser).toContain("怕不卖货"); // core.implicit 带入
+  const sentContent = createMock.mock.calls[0][0].messages[0].content;
+  expect(sentContent).toContain("怕不卖货"); // core.implicit 带入
+});
+
+test("tool_choice 强制为 tool 模式", async () => {
+  createMock.mockResolvedValue(fakeToolUse(validDelivery));
+  await POST(req({ ...DEMO_INPUT, core }));
+  const body = createMock.mock.calls[0][0];
+  expect(body.tool_choice?.type).toBe("tool");
 });
 
 test("缺 core 返回 400", async () => {
@@ -50,24 +56,26 @@ test("缺 core 返回 400", async () => {
 test("core 不合法返回 400", async () => {
   const res = await POST(req({ ...DEMO_INPUT, core: { realDemand: 123 } }));
   expect(res.status).toBe(400);
+  expect(createMock).not.toHaveBeenCalled();
 });
 
 test("缺 feedback 返回 400", async () => {
   const res = await POST(req({ feedback: "", core }));
   expect(res.status).toBe(400);
+  expect(createMock).not.toHaveBeenCalled();
 });
 
 test("首次坏内容重试一次后成功", async () => {
   createMock
-    .mockResolvedValueOnce(fakeMessage("(抽风)"))
-    .mockResolvedValueOnce(fakeMessage(JSON.stringify(validDelivery)));
+    .mockResolvedValueOnce({ content: [] }) // no tool_use → BadModelOutput
+    .mockResolvedValueOnce(fakeToolUse(validDelivery));
   const res = await POST(req({ ...DEMO_INPUT, core }));
   expect(res.status).toBe(200);
   expect(createMock).toHaveBeenCalledTimes(2);
 });
 
 test("两次坏内容返回友好提示(不暴露 Zod 原文)", async () => {
-  createMock.mockResolvedValue(fakeMessage("不是 JSON"));
+  createMock.mockResolvedValue({ content: [] }); // always no tool_use
   const res = await POST(req({ ...DEMO_INPUT, core }));
   expect(res.status).toBe(500);
   const json = await res.json();
@@ -85,7 +93,7 @@ test("SDK 连接错返回 500(不重试)", async () => {
 });
 
 test("背景字段透传进模型 prompt", async () => {
-  createMock.mockResolvedValue(fakeMessage(JSON.stringify(validDelivery)));
+  createMock.mockResolvedValue(fakeToolUse(validDelivery));
   await POST(req({ ...DEMO_INPUT, core, brandName: "某咖啡品牌", clientRole: "市场部" }));
   const sent = createMock.mock.calls[0][0].messages[0].content;
   expect(sent).toContain("某咖啡品牌");
