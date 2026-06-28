@@ -130,3 +130,27 @@ export function buildAnalyzeContent(
 
   return { system, content };
 }
+
+export function buildInsightPrompt(input: AnalyzeInput): {
+  system: string;
+  user: string;
+} {
+  const system = `你是资深广告策略顾问。只做一件事:用最快速度点破这条客户反馈的【言外之意】。
+
+输出两项:
+- keyInsight:言外之意一句话,写成"客户不是X,而是Y"的潜台词揭示句式,犀利、抓痛点,不要平淡总结。
+- emotionIntensity:客户情绪强度(如"中高""偏强,像替老板转达")。
+
+严格只输出 JSON,不要 Markdown,不要解释:
+{"keyInsight":"客户不是...,而是...","emotionIntensity":"..."}`;
+
+  const user = `客户反馈原文:
+${input.feedback}
+
+项目场景:${input.projectType}
+当前阶段:${input.stage}
+
+请只输出上述两项 JSON。`;
+
+  return { system, user };
+}

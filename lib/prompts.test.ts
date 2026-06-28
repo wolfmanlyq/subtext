@@ -81,3 +81,15 @@ test("dropMultimodal 时不含 document/image 块,但保留文件名标注", () 
   const textBlock = content.find((b) => b.type === "text") as { text: string };
   expect(textBlock.text).toContain("brief.pdf"); // 文件名仍标注
 });
+
+import { buildInsightPrompt } from "./prompts";
+
+test("buildInsightPrompt 只要 keyInsight+emotionIntensity 且拼入反馈", () => {
+  const { system, user } = buildInsightPrompt({
+    feedback: "再高级一点", projectType: "品牌海报", stage: "初稿反馈", audience: "设计", clientStyle: "",
+  });
+  expect(system).toContain("keyInsight");
+  expect(system).toContain("emotionIntensity");
+  expect(system).not.toContain("nextActions"); // 不要整张卡
+  expect(user).toContain("再高级一点");
+});

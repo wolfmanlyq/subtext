@@ -2,6 +2,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import type { ActionCard } from "@/lib/schema";
 import type { AnalyzeInput } from "@/lib/demo";
+import type { Insight } from "@/lib/insight";
 import type { Prototype } from "@/lib/prototype";
 import { PrototypeGallery } from "./PrototypeGallery";
 
@@ -32,6 +33,7 @@ function Decoding() {
 
 export function DecodeView({
   card,
+  insight,
   cardLoading,
   input,
   samples,
@@ -45,6 +47,7 @@ export function DecodeView({
   attachmentsDropped,
 }: {
   card: ActionCard | null;
+  insight?: Insight | null;
   cardLoading?: boolean;
   input: AnalyzeInput;
   samples: Prototype[] | null;
@@ -128,25 +131,26 @@ export function DecodeView({
                 <p className="error-note">⚠️ 附件未被模型读取(当前端点不支持),已仅按文本解码。</p>
               )}
               <div className="quote">{input.feedback}</div>
-              {card ? (
-                <>
-                  {card.keyInsight && (
-                    <div className="key-insight-line">{card.keyInsight}</div>
-                  )}
-                  <div className="grid-2 metric-grid-compact" style={{ marginTop: 14 }}>
-                    <div className="mini-card metric">
-                      <strong>情绪强度</strong>
-                      <span>{card.emotionIntensity || "—"}</span>
+              {(() => {
+                const k = card?.keyInsight ?? insight?.keyInsight;
+                const e = card?.emotionIntensity ?? insight?.emotionIntensity;
+                if (!k && !e) return <Decoding />;
+                return (
+                  <>
+                    {k && <div className="key-insight-line">{k}</div>}
+                    <div className="grid-2 metric-grid-compact" style={{ marginTop: 14 }}>
+                      <div className="mini-card metric">
+                        <strong>情绪强度</strong>
+                        <span>{e || "—"}</span>
+                      </div>
+                      <div className="mini-card metric insight-metric">
+                        <strong>言外之意</strong>
+                        <span>{k || "—"}</span>
+                      </div>
                     </div>
-                    <div className="mini-card metric insight-metric">
-                      <strong>言外之意</strong>
-                      <span>{card.keyInsight || "—"}</span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <Decoding />
-              )}
+                  </>
+                );
+              })()}
             </>
           )}
 
