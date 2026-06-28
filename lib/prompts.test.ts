@@ -103,3 +103,37 @@ test("buildDeliveryPrompt 产出 C 组字段、带入 core 分析、拼入反馈
   expect(user).toContain("怕不卖货");           // 带入 core 的 implicit
   expect(user).toContain("年轻化");             // 带入 core 的 tension
 });
+
+import { contextLines } from "./prompts";
+
+const ctxInput: AnalyzeInput = {
+  feedback: "再高级一点", projectType: "品牌海报", stage: "初稿反馈", audience: "设计", clientStyle: "",
+  industry: "快消", brandName: "某连锁咖啡品牌", clientRole: "品牌经理",
+};
+const emptyCtx: AnalyzeInput = {
+  feedback: "再高级一点", projectType: "品牌海报", stage: "初稿反馈", audience: "设计", clientStyle: "",
+};
+
+test("contextLines 非空字段才拼,全空返回空串", () => {
+  const s = contextLines(ctxInput);
+  expect(s).toContain("快消");
+  expect(s).toContain("某连锁咖啡品牌");
+  expect(s).toContain("品牌经理");
+  expect(contextLines(emptyCtx)).toBe("");
+});
+
+test("三个 builder:有背景则 user 含之,system 含使用规则", () => {
+  for (const built of [buildCorePrompt(ctxInput), buildDeliveryPrompt(ctxInput, sampleCore), buildInsightPrompt(ctxInput)]) {
+    expect(built.user).toContain("某连锁咖啡品牌");
+    expect(built.user).toContain("品牌经理");
+    expect(built.system).toMatch(/背景|行业|品牌名|客户角色/);
+  }
+});
+
+test("三个 builder:无背景则 user 不含背景字样、不编造品牌", () => {
+  for (const built of [buildCorePrompt(emptyCtx), buildDeliveryPrompt(emptyCtx, sampleCore), buildInsightPrompt(emptyCtx)]) {
+    expect(built.user).not.toContain("行业类型:");
+    expect(built.user).not.toContain("品牌名称:");
+    expect(built.user).not.toContain("客户角色:");
+  }
+});
