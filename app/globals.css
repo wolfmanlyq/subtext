@@ -2524,25 +2524,6 @@ li::before {
   transform: translateY(0);
 }
 
-.download-sample {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 16px;
-  min-height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  color: rgba(16,21,34,.86);
-  background: rgba(255,255,255,.58);
-  border: 1px solid rgba(255,255,255,.50);
-  box-shadow: inset 0 1px 2px rgba(255,255,255,.62), 0 8px 18px rgba(0,0,0,.12);
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.download-sample::before { content: "↓"; margin-right: 6px; }
-
 @media (max-width: 960px) {
   .context-head { display: block; }
   .context-fields { grid-template-columns: 1fr; }
