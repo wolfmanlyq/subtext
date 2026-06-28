@@ -391,7 +391,10 @@ export function DecodeView({
                   const btn = e.currentTarget;
                   btn.textContent = "已存入";
                   setSaved(true);
-                  setTimeout(() => { btn.textContent = "⌁ 存入知识库"; }, 1400);
+                  setTimeout(() => {
+                    btn.textContent = "⌁ 存入知识库";
+                    setSaved(false);
+                  }, 1400);
                 }}
               >
                 ⌁ 存入知识库
