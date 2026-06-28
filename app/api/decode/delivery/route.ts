@@ -23,6 +23,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!parsedCore.success) {
     return NextResponse.json({ error: "缺少有效的分析结果" }, { status: 400 });
   }
+  const coreData = parsedCore.data;
 
   const input: AnalyzeInput = {
     feedback: body.feedback,
@@ -33,7 +34,7 @@ export async function POST(request: Request): Promise<Response> {
   };
 
   async function callText(): Promise<string> {
-    const { system, user } = buildDeliveryPrompt(input, parsedCore.data);
+    const { system, user } = buildDeliveryPrompt(input, coreData);
     const msg = await getClient().messages.create({
       model: MODEL,
       max_tokens: 4000,

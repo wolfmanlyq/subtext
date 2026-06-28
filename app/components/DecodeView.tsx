@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, type CSSProperties } from "react";
-import type { ActionCard } from "@/lib/schema";
+import type { Core, Delivery } from "@/lib/schema";
 import type { AnalyzeInput } from "@/lib/demo";
 import type { Insight } from "@/lib/insight";
 import type { Prototype } from "@/lib/prototype";
@@ -32,9 +32,12 @@ function Decoding() {
 }
 
 export function DecodeView({
-  card,
   insight,
-  cardLoading,
+  core,
+  coreLoading,
+  coreError,
+  delivery,
+  deliveryError,
   input,
   samples,
   samplesLoading,
@@ -46,9 +49,13 @@ export function DecodeView({
   onNeedSamples,
   attachmentsDropped,
 }: {
-  card: ActionCard | null;
   insight?: Insight | null;
-  cardLoading?: boolean;
+  core: Core | null;
+  coreLoading?: boolean;
+  coreError?: string | null;
+  delivery: Delivery | null;
+  deliveryLoading?: boolean;
+  deliveryError?: string | null;
   input: AnalyzeInput;
   samples: Prototype[] | null;
   samplesLoading: boolean;
@@ -60,24 +67,24 @@ export function DecodeView({
   onNeedSamples: () => void;
   attachmentsDropped?: boolean;
 }) {
-  const [step, setStep] = useState(initialStep ?? (card?.needMoreInfo ? 5 : 1));
+  const [step, setStep] = useState(initialStep ?? (core?.needMoreInfo ? 5 : 1));
   const [maxVisited, setMaxVisited] = useState(step);
   const [picked, setPicked] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setMaxVisited((m) => Math.max(m, step));
-    if (step === 6 && card) onNeedSamples();
-  }, [step, card, onNeedSamples]);
+    if (step === 6 && core) onNeedSamples();
+  }, [step, core, onNeedSamples]);
 
   function go(n: number) {
     setStep(Math.max(1, Math.min(7, n)));
   }
 
   async function copyReply() {
-    if (!card) return;
+    if (!delivery) return;
     try {
-      await navigator.clipboard?.writeText(card.clientReply);
+      await navigator.clipboard?.writeText(delivery.clientReply);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
@@ -116,15 +123,15 @@ export function DecodeView({
               <h2>{current.full}</h2>
             </div>
             <span className="status-pill">
-              {cardLoading && !card
+              {coreLoading && !core
                 ? "Decoding"
-                : card?.needMoreInfo && step === 5
+                : core?.needMoreInfo && step === 5
                   ? "Need Confirm"
                   : "Decoded"}
             </span>
           </div>
 
-          {/* Step 1 — 甲方原声带(原话立即显示)+ 言外之意 */}
+          {/* Step 1 — 甲方原声带(原话立即显示)+ 言外之意(来自 A 快洞察) */}
           {step === 1 && (
             <>
               {attachmentsDropped && (
@@ -132,8 +139,8 @@ export function DecodeView({
               )}
               <div className="quote">{input.feedback}</div>
               {(() => {
-                const k = card?.keyInsight ?? insight?.keyInsight;
-                const e = card?.emotionIntensity ?? insight?.emotionIntensity;
+                const k = insight?.keyInsight;
+                const e = insight?.emotionIntensity;
                 if (!k && !e) return <Decoding />;
                 return (
                   <>
@@ -154,11 +161,13 @@ export function DecodeView({
             </>
           )}
 
-          {/* 其余步骤:card 未就绪时显示解码中 */}
-          {step !== 1 && !card && <Decoding />}
+          {/* Step 2-5 — 分析主体(B 组);未到时解码中,出错显示错误 */}
+          {step >= 2 && step <= 5 && !core && (
+            coreError ? <p className="error-note">⚠️ {coreError}</p> : <Decoding />
+          )}
 
           {/* Step 2 — 明话 / 潜台词 */}
-          {step === 2 && card && (
+          {step === 2 && core && (
             <div className="grid-2 demand-grid">
               <div className="mini-card demand-card visible">
                 <div className="demand-title">
@@ -166,7 +175,7 @@ export function DecodeView({
                   <h3>他说出口的</h3>
                 </div>
                 <p className="micro-copy">客户已经说出口的修改方向,先摆清楚。</p>
-                <Bullets items={card.realDemand.explicit} />
+                <Bullets items={core.realDemand.explicit} />
               </div>
               <div className="mini-card demand-card subtext">
                 <div className="demand-title">
@@ -174,16 +183,16 @@ export function DecodeView({
                   <h3>他真正担心的</h3>
                 </div>
                 <p className="micro-copy">不用猜,先把潜台词拆开再决定怎么推进。</p>
-                <Bullets items={card.realDemand.implicit} />
+                <Bullets items={core.realDemand.implicit} />
               </div>
             </div>
           )}
 
-          {/* Step 3 — 甲方纠结点(倾向进度条) */}
-          {step === 3 && card && (
+          {/* Step 3 — 甲方纠结点 */}
+          {step === 3 && core && (
             <div className="grid-2">
-              {card.coreTension.length ? (
-                card.coreTension.map((t, i) => (
+              {core.coreTension.length ? (
+                core.coreTension.map((t, i) => (
                   <div className="vs-card tension-card" key={i}>
                     <div className="tension-row">
                       <span>{t.left}</span>
@@ -207,13 +216,13 @@ export function DecodeView({
           )}
 
           {/* Step 4 — 提前替客户想一遍 */}
-          {step === 4 && card && (
+          {step === 4 && core && (
             <div className="grid-2">
               <div className="mini-card">
                 <h3>下一轮可能会被问到</h3>
                 <div className="risk-list consulting">
-                  {card.foresight.length ? (
-                    card.foresight.map((r, i) => (
+                  {core.foresight.length ? (
+                    core.foresight.map((r, i) => (
                       <div className="risk-item" key={i}>
                         {r}
                       </div>
@@ -225,17 +234,17 @@ export function DecodeView({
               </div>
               <div className="mini-card">
                 <h3>Evidence / 为什么要多想一步</h3>
-                <Bullets items={card.evidence} />
+                <Bullets items={core.evidence} />
               </div>
             </div>
           )}
 
           {/* Step 5 — 还得问甲方爸爸 */}
-          {step === 5 && card && (
+          {step === 5 && core && (
             <>
               <div className="grid-3">
-                {card.questionsToConfirm.length ? (
-                  card.questionsToConfirm.map((q, i) => (
+                {core.questionsToConfirm.length ? (
+                  core.questionsToConfirm.map((q, i) => (
                     <button
                       key={i}
                       className={`question-card${picked === q ? " active" : ""}`}
@@ -256,13 +265,18 @@ export function DecodeView({
             </>
           )}
 
+          {/* Step 6-7 — 交付(C 组);未到时解码中,出错显示错误 */}
+          {step >= 6 && step <= 7 && !delivery && (
+            deliveryError ? <p className="error-note">⚠️ {deliveryError}</p> : <Decoding />
+          )}
+
           {/* Step 6 — 先给甲方看这几个方向(回复 + 清单 + 小样) */}
-          {step === 6 && card && (
+          {step === 6 && delivery && (
             <div className="delivery">
               <div className="reply-card">
                 <h3>客户回复话术</h3>
                 <div className="reply-row">
-                  <div className="bubble">{card.clientReply || "—"}</div>
+                  <div className="bubble">{delivery.clientReply || "—"}</div>
                   <button className="btn-ghost" onClick={copyReply}>
                     {copied ? "Copied" : "Copy"}
                   </button>
@@ -275,8 +289,8 @@ export function DecodeView({
                   把模糊反馈变成可检查的下一版动作。
                 </p>
                 <div className="checklist-grid">
-                  {card.checklist.length ? (
-                    card.checklist.map((c, i) => (
+                  {delivery.checklist.length ? (
+                    delivery.checklist.map((c, i) => (
                       <div className="check-card" key={i}>
                         <div className="check-top">
                           <span className="check-title">
@@ -309,10 +323,10 @@ export function DecodeView({
           )}
 
           {/* Step 7 — 接下来谁动手 */}
-          {step === 7 && card && (
+          {step === 7 && delivery && (
             <div className="grid-5">
-              {card.nextActions.length ? (
-                card.nextActions.map((r, i) => (
+              {delivery.nextActions.length ? (
+                delivery.nextActions.map((r, i) => (
                   <div className="role-card" key={i}>
                     <b>{r.role}</b>
                     <h3>{r.title}</h3>
