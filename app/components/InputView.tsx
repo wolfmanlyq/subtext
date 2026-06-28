@@ -24,7 +24,7 @@ interface LoadedFile {
   id: string;
   name: string;
   kind: AttachmentKind;
-  mediaType: string;
+  mediaType: Attachment["mediaType"];
   data: string;
   selected: boolean;
 }
@@ -107,7 +107,7 @@ export function InputView({
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         name: file.name,
         kind,
-        mediaType: file.type,
+        mediaType: file.type as Attachment["mediaType"],
         data,
         selected: false,
       });

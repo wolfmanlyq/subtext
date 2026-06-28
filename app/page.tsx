@@ -22,24 +22,30 @@ export default function Page() {
   const [samplesLoading, setSamplesLoading] = useState(false);
   const [samplesError, setSamplesError] = useState<string | null>(null);
   const samplesRequested = useRef(false);
+  const [attachmentsDropped, setAttachmentsDropped] = useState(false);
 
-  async function handleDecode(next: AnalyzeInput) {
+  async function handleDecode(
+    next: AnalyzeInput,
+    attachments: import("@/lib/attachment").Attachment[],
+  ) {
     setLoading(true);
     setError(null);
     setCard(null);
     setSamples(null);
     setSamplesError(null);
+    setAttachmentsDropped(false);
     samplesRequested.current = false;
     try {
       const r = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
+        body: JSON.stringify({ ...next, attachments }),
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || "解码失败");
       setInput(next);
       setCard(data);
+      setAttachmentsDropped(!!data.attachmentsDropped);
       setDecodeStep(data.needMoreInfo ? 5 : 1);
       setView("decode");
     } catch (e) {
@@ -123,6 +129,7 @@ export default function Page() {
           onReset={() => setView("input")}
           onDone={() => setView("workflow")}
           onNeedSamples={fetchSamples}
+          attachmentsDropped={attachmentsDropped}
         />
       )}
     </main>

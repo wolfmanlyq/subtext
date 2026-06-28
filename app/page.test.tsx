@@ -59,3 +59,18 @@ test("analyze 失败时在输入页展示错误", async () => {
   await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
   await waitFor(() => expect(screen.getByText(/炸了/)).toBeInTheDocument());
 });
+
+test("attachmentsDropped 为真时,解码视图显示降级提示", async () => {
+  const droppedCard = { ...card, attachmentsDropped: true };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValueOnce({ ok: true, json: async () => droppedCard }),
+  );
+  render(<Page />);
+  await userEvent.click(screen.getByRole("button", { name: /Start Now/ }));
+  await userEvent.click(screen.getByRole("button", { name: /甲方爸爸的话/ }));
+  await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
+  await waitFor(() =>
+    expect(screen.getByText(/附件未被模型读取/)).toBeInTheDocument(),
+  );
+});

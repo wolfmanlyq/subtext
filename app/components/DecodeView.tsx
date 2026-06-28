@@ -37,6 +37,7 @@ export function DecodeView({
   onReset,
   onDone,
   onNeedSamples,
+  attachmentsDropped,
 }: {
   card: ActionCard;
   input: AnalyzeInput;
@@ -48,6 +49,7 @@ export function DecodeView({
   onReset: () => void;
   onDone: () => void;
   onNeedSamples: () => void;
+  attachmentsDropped?: boolean;
 }) {
   const [step, setStep] = useState(initialStep ?? (card.needMoreInfo ? 5 : 1));
   const [maxVisited, setMaxVisited] = useState(step);
@@ -111,6 +113,9 @@ export function DecodeView({
           {/* Step 1 — 甲方原声带 + 言外之意 */}
           {step === 1 && (
             <>
+              {attachmentsDropped && (
+                <p className="error-note">⚠️ 附件未被模型读取(当前端点不支持),已仅按文本解码。</p>
+              )}
               <div className="quote">{input.feedback}</div>
               {card.keyInsight && (
                 <div className="key-insight-line">{card.keyInsight}</div>
