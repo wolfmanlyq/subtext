@@ -71,3 +71,25 @@ test("attachmentsDropped 为真时,解码视图显示降级提示", async () => 
     expect(screen.getByText(/附件未被模型读取/)).toBeInTheDocument(),
   );
 });
+
+test("点击解码后立即显示原话(甲方原声带),不等 analyze 返回", async () => {
+  let resolveFetch: (v: unknown) => void = () => {};
+  const pending = new Promise((res) => { resolveFetch = res; });
+  vi.stubGlobal("fetch", vi.fn().mockReturnValueOnce(pending));
+
+  render(<Page />);
+  await userEvent.click(screen.getByRole("button", { name: /Start Now/ }));
+  // 输入页默认反馈含“白桃”
+  await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
+
+  // analyze 尚未返回:原话(用户输入的反馈)应已经显示在解码视图
+  await waitFor(() =>
+    expect(document.querySelector(".quote")?.textContent ?? "").toMatch(/白桃/),
+  );
+  // 且 AI 字段处于解码中
+  expect(screen.getByText(/解码中/)).toBeInTheDocument();
+
+  // 放行 analyze
+  resolveFetch({ ok: true, json: async () => card });
+  await waitFor(() => expect(screen.getByText("中高")).toBeInTheDocument());
+});

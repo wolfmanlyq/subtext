@@ -26,8 +26,13 @@ function Bullets({ items }: { items: string[] }) {
   );
 }
 
+function Decoding() {
+  return <p className="loading-note">解码中…正在听懂甲方的言外之意</p>;
+}
+
 export function DecodeView({
   card,
+  cardLoading,
   input,
   samples,
   samplesLoading,
@@ -39,7 +44,8 @@ export function DecodeView({
   onNeedSamples,
   attachmentsDropped,
 }: {
-  card: ActionCard;
+  card: ActionCard | null;
+  cardLoading?: boolean;
   input: AnalyzeInput;
   samples: Prototype[] | null;
   samplesLoading: boolean;
@@ -51,21 +57,22 @@ export function DecodeView({
   onNeedSamples: () => void;
   attachmentsDropped?: boolean;
 }) {
-  const [step, setStep] = useState(initialStep ?? (card.needMoreInfo ? 5 : 1));
+  const [step, setStep] = useState(initialStep ?? (card?.needMoreInfo ? 5 : 1));
   const [maxVisited, setMaxVisited] = useState(step);
   const [picked, setPicked] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setMaxVisited((m) => Math.max(m, step));
-    if (step === 6) onNeedSamples();
-  }, [step, onNeedSamples]);
+    if (step === 6 && card) onNeedSamples();
+  }, [step, card, onNeedSamples]);
 
   function go(n: number) {
     setStep(Math.max(1, Math.min(7, n)));
   }
 
   async function copyReply() {
+    if (!card) return;
     try {
       await navigator.clipboard?.writeText(card.clientReply);
       setCopied(true);
@@ -106,35 +113,48 @@ export function DecodeView({
               <h2>{current.full}</h2>
             </div>
             <span className="status-pill">
-              {card.needMoreInfo && step === 5 ? "Need Confirm" : "Decoded"}
+              {cardLoading && !card
+                ? "Decoding"
+                : card?.needMoreInfo && step === 5
+                  ? "Need Confirm"
+                  : "Decoded"}
             </span>
           </div>
 
-          {/* Step 1 — 甲方原声带 + 言外之意 */}
+          {/* Step 1 — 甲方原声带(原话立即显示)+ 言外之意 */}
           {step === 1 && (
             <>
               {attachmentsDropped && (
                 <p className="error-note">⚠️ 附件未被模型读取(当前端点不支持),已仅按文本解码。</p>
               )}
               <div className="quote">{input.feedback}</div>
-              {card.keyInsight && (
-                <div className="key-insight-line">{card.keyInsight}</div>
+              {card ? (
+                <>
+                  {card.keyInsight && (
+                    <div className="key-insight-line">{card.keyInsight}</div>
+                  )}
+                  <div className="grid-2 metric-grid-compact" style={{ marginTop: 14 }}>
+                    <div className="mini-card metric">
+                      <strong>情绪强度</strong>
+                      <span>{card.emotionIntensity || "—"}</span>
+                    </div>
+                    <div className="mini-card metric insight-metric">
+                      <strong>言外之意</strong>
+                      <span>{card.keyInsight || "—"}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <Decoding />
               )}
-              <div className="grid-2 metric-grid-compact" style={{ marginTop: 14 }}>
-                <div className="mini-card metric">
-                  <strong>情绪强度</strong>
-                  <span>{card.emotionIntensity || "—"}</span>
-                </div>
-                <div className="mini-card metric insight-metric">
-                  <strong>言外之意</strong>
-                  <span>{card.keyInsight || "—"}</span>
-                </div>
-              </div>
             </>
           )}
 
+          {/* 其余步骤:card 未就绪时显示解码中 */}
+          {step !== 1 && !card && <Decoding />}
+
           {/* Step 2 — 明话 / 潜台词 */}
-          {step === 2 && (
+          {step === 2 && card && (
             <div className="grid-2 demand-grid">
               <div className="mini-card demand-card visible">
                 <div className="demand-title">
@@ -156,7 +176,7 @@ export function DecodeView({
           )}
 
           {/* Step 3 — 甲方纠结点(倾向进度条) */}
-          {step === 3 && (
+          {step === 3 && card && (
             <div className="grid-2">
               {card.coreTension.length ? (
                 card.coreTension.map((t, i) => (
@@ -183,7 +203,7 @@ export function DecodeView({
           )}
 
           {/* Step 4 — 提前替客户想一遍 */}
-          {step === 4 && (
+          {step === 4 && card && (
             <div className="grid-2">
               <div className="mini-card">
                 <h3>下一轮可能会被问到</h3>
@@ -207,7 +227,7 @@ export function DecodeView({
           )}
 
           {/* Step 5 — 还得问甲方爸爸 */}
-          {step === 5 && (
+          {step === 5 && card && (
             <>
               <div className="grid-3">
                 {card.questionsToConfirm.length ? (
@@ -233,7 +253,7 @@ export function DecodeView({
           )}
 
           {/* Step 6 — 先给甲方看这几个方向(回复 + 清单 + 小样) */}
-          {step === 6 && (
+          {step === 6 && card && (
             <div className="delivery">
               <div className="reply-card">
                 <h3>客户回复话术</h3>
@@ -285,7 +305,7 @@ export function DecodeView({
           )}
 
           {/* Step 7 — 接下来谁动手 */}
-          {step === 7 && (
+          {step === 7 && card && (
             <div className="grid-5">
               {card.nextActions.length ? (
                 card.nextActions.map((r, i) => (

@@ -15,7 +15,6 @@ export default function Page() {
   const [input, setInput] = useState<AnalyzeInput | null>(null);
   const [card, setCard] = useState<ActionCard | null>(null);
   const [decodeStep, setDecodeStep] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [samples, setSamples] = useState<Prototype[] | null>(null);
@@ -24,17 +23,23 @@ export default function Page() {
   const samplesRequested = useRef(false);
   const [attachmentsDropped, setAttachmentsDropped] = useState(false);
 
+  const [decoding, setDecoding] = useState(false);
+
   async function handleDecode(
     next: AnalyzeInput,
     attachments: import("@/lib/attachment").Attachment[],
   ) {
-    setLoading(true);
+    // 先把原话和解码视图显示出来,AI 字段稍后填入(原话=用户输入,0 延迟)
     setError(null);
     setCard(null);
     setSamples(null);
     setSamplesError(null);
     setAttachmentsDropped(false);
     samplesRequested.current = false;
+    setInput(next);
+    setDecodeStep(1);
+    setDecoding(true);
+    setView("decode");
     try {
       const r = await fetch("/api/analyze", {
         method: "POST",
@@ -43,15 +48,14 @@ export default function Page() {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || "解码失败");
-      setInput(next);
       setCard(data);
       setAttachmentsDropped(!!data.attachmentsDropped);
       setDecodeStep(data.needMoreInfo ? 5 : 1);
-      setView("decode");
     } catch (e) {
       setError(e instanceof Error ? e.message : "未知错误");
+      setView("input");
     } finally {
-      setLoading(false);
+      setDecoding(false);
     }
   }
 
@@ -104,7 +108,7 @@ export default function Page() {
       {view === "input" && (
         <div style={{ display: "grid", placeItems: "center", width: "100%" }}>
           <InputView
-            loading={loading}
+            loading={decoding}
             onBack={() => setView("landing")}
             onDecode={handleDecode}
           />
@@ -116,10 +120,11 @@ export default function Page() {
         </div>
       )}
 
-      {view === "decode" && card && input && (
+      {view === "decode" && input && (
         <DecodeView
           key={decodeStep}
           card={card}
+          cardLoading={decoding}
           input={input}
           initialStep={decodeStep}
           samples={samples}
