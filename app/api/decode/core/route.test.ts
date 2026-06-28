@@ -67,6 +67,19 @@ test("缺 feedback 返回 400", async () => {
   expect((await POST(req({ ...DEMO_INPUT, feedback: "" }))).status).toBe(400);
 });
 
+test("多模态联网成功但返回不可解析:去掉文档块重试一次,标记 attachmentsDropped", async () => {
+  createMock
+    .mockResolvedValueOnce(fakeMessage("(联网成功但不是 JSON)"))
+    .mockResolvedValueOnce(fakeMessage(JSON.stringify(validCore)));
+  const res = await POST(req({ ...DEMO_INPUT, attachments: [pdfAtt] }));
+  expect(res.status).toBe(200);
+  const json = await res.json();
+  expect(json.attachmentsDropped).toBe(true);
+  const secondContent = createMock.mock.calls[1][0].messages[0].content;
+  expect(secondContent.some((b: { type: string }) => b.type === "document")).toBe(false);
+  expect(createMock).toHaveBeenCalledTimes(2);
+});
+
 test("无附件且 SDK 失败返回 500(不重试)", async () => {
   createMock.mockImplementation(() => { throw new Error("boom"); });
   const res = await POST(req(DEMO_INPUT));

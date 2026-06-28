@@ -21,7 +21,6 @@ export default function Page() {
   const [coreError, setCoreError] = useState<string | null>(null);
 
   const [delivery, setDelivery] = useState<Delivery | null>(null);
-  const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
   const [samples, setSamples] = useState<Prototype[] | null>(null);
@@ -83,7 +82,6 @@ export default function Page() {
   }
 
   async function fetchDelivery(next: AnalyzeInput, coreData: Core) {
-    setDeliveryLoading(true);
     setDeliveryError(null);
     try {
       const r = await fetch("/api/decode/delivery", {
@@ -96,8 +94,6 @@ export default function Page() {
       setDelivery(data as Delivery);
     } catch (e) {
       setDeliveryError(e instanceof Error ? e.message : "未知错误");
-    } finally {
-      setDeliveryLoading(false);
     }
   }
 
@@ -165,7 +161,6 @@ export default function Page() {
           coreLoading={coreLoading}
           coreError={coreError}
           delivery={delivery}
-          deliveryLoading={deliveryLoading}
           deliveryError={deliveryError}
           input={input}
           initialStep={decodeStep}

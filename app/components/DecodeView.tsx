@@ -54,7 +54,6 @@ export function DecodeView({
   coreLoading?: boolean;
   coreError?: string | null;
   delivery: Delivery | null;
-  deliveryLoading?: boolean;
   deliveryError?: string | null;
   input: AnalyzeInput;
   samples: Prototype[] | null;
