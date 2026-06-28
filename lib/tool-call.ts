@@ -11,7 +11,8 @@ export function toInputSchema(schema: z.ZodType): Record<string, unknown> {
 }
 
 interface CallArgs<T> {
-  client: { messages: { create: (body: unknown) => Promise<{ content: unknown }> } };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: { messages: { create: (body: any) => Promise<{ content: unknown }> } };
   model: string;
   maxTokens: number;
   system: string;

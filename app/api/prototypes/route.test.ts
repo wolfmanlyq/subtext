@@ -22,67 +22,73 @@ function req(body: unknown): Request {
   });
 }
 
-function fakeMessage(text: string) {
-  return { content: [{ type: "text", text }] };
+const validPrototype = {
+  name: "强化卖点版",
+  strategy: "强化卖点",
+  sampleCopy: "精心设计的文案",
+  highlight: "核心亮点",
+  recommend: "主推",
+  html: "<h1>A</h1>",
+};
+
+function fakeToolUse(input: unknown) {
+  return {
+    content: [{ type: "tool_use", name: "emit_prototypes", id: "tu_1", input }],
+  };
 }
 
-test("解析模型返回的 prototypes JSON", async () => {
-  const payload = {
-    prototypes: [
-      {
-        strategy: "强化卖点",
-        html: "<h1>A</h1>",
-        solvesFeedback: "卖点",
-        risk: "无",
-        priority: "高",
-      },
-    ],
-  };
-  createMock.mockResolvedValue(fakeMessage(JSON.stringify(payload)));
+test("成功返回 prototypes 数组", async () => {
+  createMock.mockResolvedValue(fakeToolUse({ prototypes: [validPrototype] }));
   const res = await POST(req({ needSummary: "x", rawFeedback: "y" }));
   expect(res.status).toBe(200);
   const json = await res.json();
+  expect(Array.isArray(json.prototypes)).toBe(true);
   expect(json.prototypes[0].html).toBe("<h1>A</h1>");
 });
 
-test("模型返回被代码块包裹的 JSON 也能解析", async () => {
-  const payload = { prototypes: [] };
-  createMock.mockResolvedValue(
-    fakeMessage("```json\n" + JSON.stringify(payload) + "\n```"),
-  );
-  const res = await POST(req({ needSummary: "x", rawFeedback: "y" }));
-  expect(res.status).toBe(200);
-});
-
-test("缺参数返回 400", async () => {
-  const res = await POST(req({ needSummary: "" }));
+test("缺 needSummary 返回 400", async () => {
+  const res = await POST(req({ rawFeedback: "y" }));
   expect(res.status).toBe(400);
 });
 
-test("SDK 调用失败返回 500", async () => {
-  getClientMock.mockImplementation(() => {
-    throw new Error("boom");
-  });
-  const res = await POST(req({ needSummary: "x", rawFeedback: "y" }));
-  expect(res.status).toBe(500);
+test("缺 rawFeedback 返回 400", async () => {
+  const res = await POST(req({ needSummary: "x" }));
+  expect(res.status).toBe(400);
 });
 
-test("首次返回坏内容,自动重试一次后成功", async () => {
-  const payload = { prototypes: [{ name: "A", strategy: "s", sampleCopy: "c", highlight: "h", recommend: "主推", html: "<h1>A</h1>" }] };
+test("首次坏输出,重试一次后成功(共 2 次调用)", async () => {
+  // First call returns no tool_use block → BadModelOutput
   createMock
-    .mockResolvedValueOnce(fakeMessage("中转抽风,没有 JSON"))
-    .mockResolvedValueOnce(fakeMessage(JSON.stringify(payload)));
+    .mockResolvedValueOnce({ content: [{ type: "text", text: "no tool" }] })
+    .mockResolvedValueOnce(fakeToolUse({ prototypes: [validPrototype] }));
   const res = await POST(req({ needSummary: "x", rawFeedback: "y" }));
   expect(res.status).toBe(200);
   expect(createMock).toHaveBeenCalledTimes(2);
+  const json = await res.json();
+  expect(json.prototypes[0].name).toBe("强化卖点版");
 });
 
-test("两次坏内容返回友好提示(不暴露 未找到 JSON 原文)", async () => {
-  createMock.mockResolvedValue(fakeMessage("不是 JSON"));
+test("两次坏输出返回友好 500(共 2 次调用,不暴露 Zod 错误信息)", async () => {
+  createMock.mockResolvedValue({ content: [{ type: "text", text: "not a tool" }] });
   const res = await POST(req({ needSummary: "x", rawFeedback: "y" }));
   expect(res.status).toBe(500);
   const json = await res.json();
   expect(json.error).toMatch(/异常|请重试/);
-  expect(json.error).not.toMatch(/未找到 JSON/);
+  expect(json.error).not.toMatch(/ZodError/);
+  expect(json.error).not.toMatch(/parse/);
   expect(createMock).toHaveBeenCalledTimes(2);
+});
+
+test("连接错误不重试,返回 500(共 1 次调用)", async () => {
+  createMock.mockRejectedValue(new Error("connection refused"));
+  const res = await POST(req({ needSummary: "x", rawFeedback: "y" }));
+  expect(res.status).toBe(500);
+  expect(createMock).toHaveBeenCalledTimes(1);
+});
+
+test("调用时使用 tool_choice.type === 'tool'", async () => {
+  createMock.mockResolvedValue(fakeToolUse({ prototypes: [validPrototype] }));
+  await POST(req({ needSummary: "x", rawFeedback: "y" }));
+  const callArg = createMock.mock.calls[0][0] as Record<string, unknown>;
+  expect((callArg.tool_choice as { type: string }).type).toBe("tool");
 });

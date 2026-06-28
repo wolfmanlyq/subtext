@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getClient, MODEL } from "@/lib/anthropic";
 import { buildPrototypePrompt } from "@/lib/prompts";
-import { extractJson } from "@/lib/extract-json";
+import { callStructured, BadModelOutput } from "@/lib/tool-call";
+import { PrototypesSchema } from "@/lib/prototype";
 
 export const runtime = "nodejs";
 
@@ -9,9 +10,6 @@ interface Body {
   needSummary: string;
   rawFeedback: string;
 }
-
-/** 模型返回了内容、但不是合法 JSON(解析失败)—— 可重试。 */
-class BadModelOutput extends Error {}
 
 export async function POST(request: Request): Promise<Response> {
   let body: Body;
@@ -26,33 +24,26 @@ export async function POST(request: Request): Promise<Response> {
 
   const { system, user } = buildPrototypePrompt(body.needSummary, body.rawFeedback);
 
-  async function callText(): Promise<string> {
-    const msg = await getClient().messages.create({
+  async function getPrototypes() {
+    return callStructured({
+      client: getClient(),
       model: MODEL,
-      max_tokens: 16000,
+      maxTokens: 16000,
       system,
-      messages: [{ role: "user", content: user }],
+      content: user,
+      schema: PrototypesSchema,
+      toolName: "emit_prototypes",
+      toolDescription:
+        "返回 2-3 个方向小样(prototypes 数组,每个含 name/strategy/sampleCopy/highlight/recommend/html)。",
     });
-    const textBlock = (msg.content as Array<{ type: string; text?: string }>).find(
-      (b) => b.type === "text",
-    );
-    return textBlock?.text ?? "";
-  }
-
-  function parse(text: string): unknown {
-    try {
-      return extractJson(text);
-    } catch {
-      throw new BadModelOutput("小样返回内容无法解析");
-    }
   }
 
   try {
-    return NextResponse.json(parse(await callText()));
+    return NextResponse.json(await getPrototypes());
   } catch (firstErr) {
     if (firstErr instanceof BadModelOutput) {
       try {
-        return NextResponse.json(parse(await callText()));
+        return NextResponse.json(await getPrototypes());
       } catch (retryErr) {
         if (retryErr instanceof BadModelOutput) {
           console.error("[prototypes] 两次输出均无效");
