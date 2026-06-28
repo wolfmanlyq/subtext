@@ -73,3 +73,49 @@ ${rawFeedback}
 
   return { system, user };
 }
+
+import type { Attachment } from "./attachment";
+
+export type AnalyzeContentBlock =
+  | { type: "text"; text: string }
+  | { type: "document"; source: { type: "base64"; media_type: string; data: string } }
+  | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+
+export function buildAnalyzeContent(
+  input: AnalyzeInput,
+  attachments: Attachment[],
+  opts: { dropMultimodal?: boolean } = {},
+): { system: string; content: AnalyzeContentBlock[] } {
+  const { system, user } = buildAnalyzePrompt(input);
+
+  const textAttachments = attachments.filter((a) => a.kind === "text");
+  const fileNames = attachments.map((a) => a.name);
+
+  let text = user;
+  if (fileNames.length) {
+    text += `\n\n[参考材料文件]${fileNames.join("、")}`;
+  }
+  for (const a of textAttachments) {
+    text += `\n\n[参考材料:${a.name}]\n${a.data}`;
+  }
+
+  const content: AnalyzeContentBlock[] = [{ type: "text", text }];
+
+  if (!opts.dropMultimodal) {
+    for (const a of attachments) {
+      if (a.kind === "pdf") {
+        content.push({
+          type: "document",
+          source: { type: "base64", media_type: a.mediaType, data: a.data },
+        });
+      } else if (a.kind === "image") {
+        content.push({
+          type: "image",
+          source: { type: "base64", media_type: a.mediaType, data: a.data },
+        });
+      }
+    }
+  }
+
+  return { system, content };
+}
