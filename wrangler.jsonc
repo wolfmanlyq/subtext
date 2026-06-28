@@ -4,6 +4,9 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-03-25",
   "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ANTHROPIC_BASE_URL": "https://api.openai-next.com"
+  },
   "assets": {
     "binding": "ASSETS",
     "directory": ".open-next/assets"
