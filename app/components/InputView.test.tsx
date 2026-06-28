@@ -48,3 +48,43 @@ test("Back 触发 onBack", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Back" }));
   expect(onBack).toHaveBeenCalled();
 });
+
+test("选中附件总量超过 8MB 时拦截:不调用 onDecode 并提示", async () => {
+  const onDecode = vi.fn();
+  render(<InputView loading={false} onBack={vi.fn()} onDecode={onDecode} />);
+  await userEvent.click(screen.getByRole("button", { name: /历史记录/ }));
+  const input = screen.getByLabelText(/上传/) as HTMLInputElement;
+  // 三个各 ~3MB 的文本文件:每个 < 4MB 单文件限,合计 ~9MB > 8MB 总量限
+  const big = "a".repeat(3 * 1024 * 1024);
+  const f1 = new File([big], "a.txt", { type: "text/plain" });
+  const f2 = new File([big], "b.txt", { type: "text/plain" });
+  const f3 = new File([big], "c.txt", { type: "text/plain" });
+  await userEvent.upload(input, [f1, f2, f3]);
+  for (const name of ["a.txt", "b.txt", "c.txt"]) {
+    const card = (await screen.findByTitle(name)).closest(".file-card") as HTMLElement;
+    await userEvent.click(card.querySelector("button")!); // “使用此文件”
+  }
+  await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
+  expect(onDecode).not.toHaveBeenCalled();
+  expect(document.querySelector(".error-note")?.textContent).toMatch(/总量超过 8MB/);
+});
+
+test("总量超限提示在抽屉关闭后仍可见(主输入卡)", async () => {
+  const onDecode = vi.fn();
+  render(<InputView loading={false} onBack={vi.fn()} onDecode={onDecode} />);
+  await userEvent.click(screen.getByRole("button", { name: /历史记录/ }));
+  const input = screen.getByLabelText(/上传/) as HTMLInputElement;
+  const big = "a".repeat(3 * 1024 * 1024);
+  const files = ["a.txt", "b.txt", "c.txt"].map((n) => new File([big], n, { type: "text/plain" }));
+  await userEvent.upload(input, files);
+  for (const name of ["a.txt", "b.txt", "c.txt"]) {
+    const card = (await screen.findByTitle(name)).closest(".file-card") as HTMLElement;
+    await userEvent.click(card.querySelector("button")!);
+  }
+  // 关闭抽屉
+  await userEvent.click(screen.getAllByRole("button", { name: "关闭" })[0]);
+  await userEvent.click(screen.getByRole("button", { name: /开始解码/ }));
+  expect(onDecode).not.toHaveBeenCalled();
+  // 主卡片上应能看到错误提示(抽屉已关)
+  expect(screen.getByText(/总量超过 8MB/)).toBeInTheDocument();
+});

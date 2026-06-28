@@ -5,6 +5,7 @@ import {
   type Attachment,
   type AttachmentKind,
   MAX_FILE_BYTES,
+  attachmentsWithinLimit,
 } from "@/lib/attachment";
 
 const SCENES = ["新品上市", "活动促销", "社媒种草", "短视频脚本"];
@@ -131,6 +132,10 @@ export function InputView({
       mediaType: f.mediaType,
       data: f.data,
     }));
+    if (!attachmentsWithinLimit(attachments)) {
+      setNotice("参考材料总量超过 8MB,请取消选用部分文件后重试。");
+      return;
+    }
     onDecode(
       { feedback, projectType, stage, audience: goals.join(" / "), clientStyle: "" },
       attachments,
@@ -170,6 +175,9 @@ export function InputView({
           <div className="selected-ref">
             已选择参考材料:{selected.map((f) => f.name).join(" / ")}
           </div>
+        )}
+        {notice && notice.includes("总量") && (
+          <p className="error-note">⚠️ {notice}</p>
         )}
 
         <div className="chip-groups">
